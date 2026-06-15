@@ -1,0 +1,140 @@
+html,
+body {
+  min-height: 100vh;
+  margin: 0;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f6f9;
+}
+
+
+/* Sidebar Styles */
+.sidebar {
+  width: 280px;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  font-family: 'Inter', sans-serif;
+}
+
+.sidebar-brand {
+  padding: 10px 0;
+  letter-spacing: 1px;
+}
+
+.sidebar-nav .nav-item .nav-link {
+  color: rgba(255, 255, 255, 0.7) !important;
+  border-radius: 8px;
+  margin-bottom: 5px;
+  transition: all 0.2s ease;
+  padding: 12px 15px;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.sidebar-nav .nav-item .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff !important;
+  transform: translateX(4px);
+}
+
+.sidebar-nav .nav-item .nav-link.active {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  color: #fff !important;
+  box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+}
+
+.sidebar-user {
+  margin-top: auto;
+}
+
+
+.top-header {
+  height: 70px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: -280px;
+  }
+
+  .sidebar.show {
+    left: 0;
+  }
+}
+
+.form-floating>.form-control-plaintext::placeholder,
+.form-floating>.form-control::placeholder {
+  color: var(--bs-secondary-color);
+  text-align: end;
+}
+
+.form-floating>.form-control-plaintext:focus::placeholder,
+.form-floating>.form-control:focus::placeholder {
+  text-align: start;
+}
+
+/* Collapsed Sidebar Styles */
+.sidebar.sidebar-collapsed {
+  width: 80px;
+}
+
+.sidebar.sidebar-collapsed .sidebar-brand span,
+.sidebar.sidebar-collapsed .sidebar-user strong {
+  display: none;
+}
+
+.sidebar.sidebar-collapsed .sidebar-brand {
+  justify-content: center;
+}
+
+.sidebar.sidebar-collapsed .sidebar-brand i {
+  margin: 0 !important;
+  font-size: 1.5rem;
+}
+
+.sidebar.sidebar-collapsed .nav-link {
+  text-align: center;
+  font-size: 0;
+  padding: 12px 0;
+}
+
+.sidebar.sidebar-collapsed .nav-link i {
+  font-size: 1.2rem;
+  margin: 0 !important;
+}
+
+.sidebar.sidebar-collapsed .sidebar-user>a {
+  justify-content: center;
+}
+
+.sidebar.sidebar-collapsed .sidebar-user img {
+  margin: 0 !important;
+}
+
+.sidebar.sidebar-collapsed .sidebar-user::after {
+  display: none;
+}
+
+/* Fix DataTables Pagination Overflow */
+.dataTables_wrapper {
+  padding-bottom: 2rem !important;
+  margin-bottom: 2rem !important;
+}
+
+.dataTables_wrapper .row:last-child {
+  margin-top: 2rem !important;
+  margin-bottom: 1rem !important;
+  display: flex !important;
+  align-items: center !important;
+  position: relative;
+  z-index: 10;
+}
+
+.dataTables_paginate {
+  margin-bottom: 0 !important;
+  padding-bottom: 10px !important;
+}

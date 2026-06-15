@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SmartSociety</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/SmartSociety.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-light" style="overflow: hidden;">
+    <div class="d-flex w-100 vh-100">
+        <!-- Sidebar -->
+        <partial name="_Sidebar" />
+
+        <!-- Main Content Area -->
+        <div class="flex-grow-1 d-flex flex-column h-100" style="background-color: #f8fafc; overflow-y: auto; overflow-x: hidden;">
+            @{
+                var currentRole = Context.Request.Cookies["MockRole"] ?? "Admin";
+                var roles = new[] { "Admin", "Resident", "Guard", "Accountant", "Technician" };
+            }
+            <!-- Top Navbar -->
+            <header class="top-header bg-white shadow-sm px-4 py-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-light me-3" id="sidebarToggle">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <h5 class="mb-0 text-muted">@ViewData["Title"]</h5>
+                </div>
+                
+                <div class="d-flex align-items-center">
+                    <!-- Mock Role Switcher -->
+                    <form asp-controller="Home" asp-action="ChangeRole" method="post" class="d-flex align-items-center me-3">
+                        <label class="me-2 text-muted small fw-bold">Mock Role:</label>
+                        <select name="role" class="form-select form-select-sm w-auto shadow-sm" onchange="this.form.submit()">
+                            @foreach(var r in roles)
+                            {
+                                if(currentRole == r)
+                                {
+                                    <option value="@r" selected>@r</option>
+                                }
+                                else
+                                {
+                                    <option value="@r">@r</option>
+                                }
+                            }
+                        </select>
+                    </form>
+                    
+                    <div class="dropdown">
+                        <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle" id="dropdownUser2" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="https://ui-avatars.com/api/?name=@currentRole&background=random" alt="" width="32" height="32" class="rounded-circle me-2">
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="dropdownUser2">
+                            <li><a class="dropdown-item" href="#">Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#">Sign out</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Render Body -->
+            <main role="main" class="p-4 flex-grow-1">
+                @RenderBody()
+            </main>
+
+            <!-- Footer -->
+            <footer class="footer text-muted p-4 bg-white border-top mt-auto">
+                <div class="container-fluid text-center">
+                    &copy; 2026 - SmartSociety - Premium Edition
+                </div>
+            </footer>
+        </div>
+    </div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

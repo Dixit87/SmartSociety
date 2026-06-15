@@ -1,0 +1,106 @@
+using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
+using Dapper;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+using SmartSociety.Models;
+
+namespace SmartSociety.Repositories
+{
+    public class ComplaintRepository : IComplaintRepository
+    {
+        private readonly string _connectionString;
+
+        public ComplaintRepository(IConfiguration configuration)
+        {
+            _connectionString = configuration.GetConnectionString("DefaultConnection");
+        }
+
+        public async Task<IEnumerable<Complaint>> GetAllAsync(string status = null, int? month = null, int? year = null)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QueryAsync<Complaint>(
+                "sp_Complaint_GetAll",
+                new { Status = status, Month = month, Year = year },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<Complaint> GetByIdAsync(int complaintId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QuerySingleOrDefaultAsync<Complaint>(
+                "sp_Complaint_GetById",
+                new { ComplaintId = complaintId },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<int> CreateAsync(Complaint complaint)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var parameters = new DynamicParameters();
+            parameters.Add("@FlatId", complaint.FlatId);
+            parameters.Add("@RaisedBy", complaint.RaisedBy);
+            parameters.Add("@Category", complaint.Category);
+            parameters.Add("@Title", complaint.Title);
+            parameters.Add("@Description", complaint.Description);
+            parameters.Add("@Priority", complaint.Priority);
+            parameters.Add("@PhotoUrl", complaint.PhotoUrl);
+            parameters.Add("@ComplaintId", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync("sp_Complaint_Create", parameters, commandType: CommandType.StoredProcedure);
+            return parameters.Get<int>("@ComplaintId");
+        }
+
+        public async Task UpdateStatusAsync(int complaintId, string status, string adminRemarks = null)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.ExecuteAsync(
+                "sp_Complaint_UpdateStatus",
+                new { ComplaintId = complaintId, Status = status, AdminRemarks = adminRemarks },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task AssignAsync(int complaintId, int assignedTo)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.ExecuteAsync(
+                "sp_Complaint_Assign",
+                new { ComplaintId = complaintId, AssignedTo = assignedTo },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<ComplaintDashboardStats> GetDashboardStatsAsync()
+        {
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QuerySingleOrDefaultAsync<ComplaintDashboardStats>(
+                "sp_Complaint_GetDashboardStats",
+                commandType: CommandType.StoredProcedure) ?? new ComplaintDashboardStats();
+        }
+
+        public async Task UpdateAsync(Complaint complaint)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.ExecuteAsync(
+                "sp_Complaint_Update",
+                new
+                {
+                    ComplaintId = complaint.ComplaintId,
+                    Category = complaint.Category,
+                    Title = complaint.Title,
+                    Description = complaint.Description,
+                    Priority = complaint.Priority
+                },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task DeleteAsync(int complaintId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.ExecuteAsync(
+                "sp_Complaint_Delete",
+                new { ComplaintId = complaintId },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+}

@@ -1,0 +1,362 @@
+@model IEnumerable<SmartSociety.Models.ParkingSlot>
+
+@{
+    ViewData["Title"] = "Parking Management";
+}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" />
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-2">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item text-muted">Admin</li>
+    <li class="breadcrumb-item active fw-bold" aria-current="page">Parking Management</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Parking Slots Allocation</h2>
+        <p class="text-muted mb-0">Manage parking slots, assign to flats, and track vehicles.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="DownloadTemplate" class="btn btn-outline-secondary px-3 py-2 fw-semibold rounded-pill shadow-sm">
+            <i class="fa-solid fa-download me-1"></i> Template
+        </a>
+        <button type="button" class="btn btn-outline-primary px-3 py-2 fw-semibold rounded-pill shadow-sm" onclick="$('#bulkUploadFile').click()">
+            <i class="fa-solid fa-file-excel me-1"></i> Bulk Upload
+        </button>
+        <a asp-action="Upsert" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill shadow-sm">
+            <i class="fa-solid fa-plus me-2"></i> Add New Slot
+        </a>
+    </div>
+    <form id="bulkUploadForm" style="display:none;">
+        <input type="file" id="bulkUploadFile" accept=".xlsx" onchange="handleBulkUpload(this)" />
+    </form>
+</div>
+
+<!-- Dashboard Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="bg-primary bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-car fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Total Slots</p>
+                <h4 class="fw-bold text-dark mb-0">@ViewBag.TotalSlots</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-success bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-success text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-check-double fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Allocated</p>
+                <h4 class="fw-bold text-dark mb-0">@ViewBag.AllocatedSlots</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-warning bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-warning text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-car-side fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Available</p>
+                <h4 class="fw-bold text-dark mb-0">@ViewBag.AvailableSlots</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
+        <i class="fa-solid fa-circle-check me-2"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="bg-white rounded-4 shadow-sm p-4">
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <label class="form-label text-muted small fw-bold mb-1">Filter by Type</label>
+            <select id="typeFilter" class="form-select form-select-sm">
+                <option value="">All Vehicles</option>
+                <option value="2-Wheeler">2-Wheeler</option>
+                <option value="4-Wheeler">4-Wheeler</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-muted small fw-bold mb-1">Filter Allocation</label>
+            <select id="allocationFilter" class="form-select form-select-sm">
+                <option value="">All Slots</option>
+                <option value="Allocated">Allocated</option>
+                <option value="Available">Available</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="parkingTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Slot Details</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Allocation Status</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Assigned Flat</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Status</th>
+                    <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="border-top-0">
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var slot in Model)
+                    {
+                        <tr>
+                            <td class="py-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="@(slot.VehicleType == "4-Wheeler" ? "bg-primary-subtle text-primary" : "bg-info-subtle text-info") rounded-3 d-flex justify-content-center align-items-center fw-bold me-3" style="width: 45px; height: 45px;">
+                                        <i class="fa-solid @(slot.VehicleType == "4-Wheeler" ? "fa-car" : "fa-motorcycle") fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-dark">@slot.SlotNumber</h6>
+                                        <small class="text-muted">@slot.VehicleType</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                @if (slot.IsVisitorSlot)
+                                {
+                                    <span class="badge bg-purple-subtle text-purple border border-purple px-2 py-1 mb-1" style="color: #6f42c1; background-color: #e0cffc;"><i class="fa-solid fa-id-badge me-1"></i> Visitor Slot</span>
+                                }
+                                else if (slot.FlatId.HasValue)
+                                {
+                                    <span class="badge bg-success-subtle text-success px-2 py-1 mb-1"><i class="fa-solid fa-check me-1"></i> Allocated</span>
+                                    @if(!string.IsNullOrEmpty(slot.VehicleNumber))
+                                    {
+                                        <div class="small text-muted"><i class="fa-regular fa-id-card fa-sm me-1"></i> @slot.VehicleNumber</div>
+                                    }
+                                    @if(!string.IsNullOrEmpty(slot.VehicleMakeModel))
+                                    {
+                                        <div class="small text-muted mt-1"><i class="fa-solid fa-car-side fa-sm me-1"></i> @slot.VehicleMakeModel</div>
+                                    }
+                                    @if(!string.IsNullOrEmpty(slot.StickerNumber))
+                                    {
+                                        <div class="small text-muted mt-1"><i class="fa-solid fa-tag fa-sm me-1"></i> Sticker: @slot.StickerNumber</div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="fa-solid fa-circle-exclamation me-1"></i> Available</span>
+                                }
+                            </td>
+                            <td class="py-3">
+                                @if (slot.IsVisitorSlot)
+                                {
+                                    <div class="text-muted small fst-italic">Reserved for Guests</div>
+                                }
+                                else if (slot.FlatId.HasValue)
+                                {
+                                    <div class="fw-medium text-dark">@slot.BlockName - @slot.FlatNumber</div>
+                                    @if(!string.IsNullOrEmpty(slot.OwnerName))
+                                    {
+                                        <div class="text-muted small"><i class="fa-solid fa-user-tie fa-sm me-1"></i> @slot.OwnerName</div>
+                                    }
+                                    else if(!string.IsNullOrEmpty(slot.TenantName))
+                                    {
+                                        <div class="text-muted small"><i class="fa-solid fa-user fa-sm me-1"></i> @slot.TenantName</div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-muted small fst-italic">Not Assigned</div>
+                                }
+                            </td>
+                            <td class="py-3">
+                                <div class="form-check form-switch d-flex align-items-center">
+                                    <input class="form-check-input me-2 mt-0" type="checkbox" role="switch" id="statusSwitch_@slot.SlotId" 
+                                           @(slot.IsActive ? "checked" : "") onchange="toggleStatus(@slot.SlotId, this.checked)" style="cursor:pointer;">
+                                    <label class="form-check-label mb-0" for="statusSwitch_@slot.SlotId">
+                                        @if (slot.IsActive)
+                                        {
+                                            <span class="badge bg-success rounded-pill" id="statusBadge_@slot.SlotId">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger rounded-pill" id="statusBadge_@slot.SlotId">Inactive</span>
+                                        }
+                                    </label>
+                                </div>
+                            </td>
+                            <td class="py-3 text-end">
+                                <div class="btn-group shadow-sm">
+                                    <a asp-action="Upsert" asp-route-id="@slot.SlotId" class="btn btn-light btn-sm text-primary" title="Edit">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-light btn-sm text-danger" title="Delete" onclick="deleteSlot(@slot.SlotId, '@slot.SlotNumber')">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    
+    <script>
+        $(document).ready(function () {
+            var table = $('#parkingTable').DataTable({
+                "pageLength": 10,
+                "ordering": true,
+                "responsive": true,
+                "dom": '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+                "buttons": [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="fa-solid fa-file-excel me-1"></i> Excel',
+                        className: 'btn btn-sm btn-outline-success mb-2',
+                        init: function(api, node, config) { $(node).removeClass('btn-secondary'); },
+                        exportOptions: { columns: [0, 1, 2, 3] }
+                    },
+                    {
+                        extend: 'pdfHtml5',
+                        text: '<i class="fa-solid fa-file-pdf me-1"></i> PDF',
+                        className: 'btn btn-sm btn-outline-danger mb-2',
+                        init: function(api, node, config) { $(node).removeClass('btn-secondary'); },
+                        exportOptions: { columns: [0, 1, 2, 3] }
+                    }
+                ],
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search slots..."
+                }
+            });
+
+            // Filters
+            $('#typeFilter').on('change', function () {
+                table.column(0).search(this.value).draw();
+            });
+
+            $('#allocationFilter').on('change', function () {
+                var val = this.value;
+                table.column(1).search(val ? '^.*' + val + '.*$' : '', true, false).draw();
+            });
+        });
+
+        function deleteSlot(id, name) {
+            Swal.fire({
+                title: 'Delete Slot?',
+                text: `Are you sure you want to delete parking slot ${name}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Parking/Delete/' + id,
+                        type: 'POST',
+                        data: { __RequestVerificationToken: token },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire('Deleted!', res.message, 'success').then(() => location.reload());
+                            } else {
+                                Swal.fire('Error!', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function toggleStatus(id, isActive) {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            $.ajax({
+                url: '/Parking/ToggleStatus/' + id,
+                type: 'POST',
+                data: { __RequestVerificationToken: token },
+                success: function (res) {
+                    if (res.success) {
+                        var badge = $('#statusBadge_' + id);
+                        if (isActive) {
+                            badge.removeClass('bg-danger').addClass('bg-success').text('Active');
+                        } else {
+                            badge.removeClass('bg-success').addClass('bg-danger').text('Inactive');
+                        }
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 3000 });
+                    } else {
+                        $('#statusSwitch_' + id).prop('checked', !isActive);
+                        Swal.fire('Error!', res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function handleBulkUpload(input) {
+            if (input.files && input.files[0]) {
+                var file = input.files[0];
+                var formData = new FormData();
+                formData.append("uploadFile", file);
+                formData.append("__RequestVerificationToken", $('input[name="__RequestVerificationToken"]').val());
+
+                Swal.fire({
+                    title: 'Uploading...',
+                    html: 'Please wait while we process the parking slots.',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                $.ajax({
+                    url: '/Parking/BulkUpload',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        if (res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: res.message
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('Error', res.message, 'error');
+                        }
+                        $('#bulkUploadFile').val('');
+                    },
+                    error: function (err) {
+                        Swal.fire('Error', 'An unexpected error occurred during upload.', 'error');
+                        $('#bulkUploadFile').val('');
+                    }
+                });
+            }
+        }
+    </script>
+}

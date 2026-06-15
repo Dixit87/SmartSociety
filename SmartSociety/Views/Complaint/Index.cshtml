@@ -1,0 +1,673 @@
+@model dynamic
+
+@{
+    ViewData["Title"] = "Complaint Helpdesk";
+    var stats = Model.Stats as SmartSociety.Models.ComplaintDashboardStats;
+    var complaints = Model.Complaints as IEnumerable<SmartSociety.Models.Complaint>;
+    var flats = Model.Flats as IEnumerable<SmartSociety.Models.Flat>;
+    var residents = Model.Residents as IEnumerable<SmartSociety.Models.User>;
+    var technicians = Model.Technicians as IEnumerable<SmartSociety.Models.User>;
+}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Complaint Helpdesk</h2>
+        <p class="text-muted mb-0">Track and resolve resident issues efficiently.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill shadow-sm" onclick="openRaiseModal()">
+            <i class="fa-solid fa-plus me-2"></i> Raise Complaint
+        </button>
+    </div>
+</div>
+
+<!-- Dashboard Stats -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-semibold mb-0 opacity-75">Total Complaints</h6>
+                    <div class="bg-white bg-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fa-solid fa-ticket fs-5"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold mb-0">@stats.TotalComplaints</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-semibold mb-0 opacity-75">Open / Pending</h6>
+                    <div class="bg-white bg-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fa-solid fa-envelope-open-text fs-5"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold mb-0">@stats.OpenComplaints</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-semibold mb-0 opacity-75">In Progress</h6>
+                    <div class="bg-white bg-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fa-solid fa-person-digging fs-5"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold mb-0">@stats.InProgressComplaints</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-semibold mb-0 opacity-75">Resolved</h6>
+                    <div class="bg-white bg-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fa-solid fa-check-double fs-5"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold mb-0">@stats.ResolvedComplaints</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 mb-5">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3 flex-wrap gap-3">
+            <div class="d-flex gap-2">
+                <a href="#" onclick="applyFilters(null)" class="btn @(string.IsNullOrEmpty(ViewBag.CurrentStatus) ? "btn-dark shadow-sm" : "btn-light") rounded-pill px-4 fw-semibold">All Tickets</a>
+                <a href="#" onclick="applyFilters('Open')" class="btn @(ViewBag.CurrentStatus == "Open" ? "btn-dark shadow-sm" : "btn-light") rounded-pill px-4 fw-semibold">Open</a>
+                <a href="#" onclick="applyFilters('InProgress')" class="btn @(ViewBag.CurrentStatus == "InProgress" ? "btn-dark shadow-sm" : "btn-light") rounded-pill px-4 fw-semibold">In Progress</a>
+                <a href="#" onclick="applyFilters('Resolved')" class="btn @(ViewBag.CurrentStatus == "Resolved" ? "btn-dark shadow-sm" : "btn-light") rounded-pill px-4 fw-semibold">Resolved</a>
+            </div>
+            
+            <div class="d-flex gap-2 align-items-center">
+                <select id="filterMonth" class="form-select border-0 shadow-sm bg-light" style="width: 140px;">
+                    <option value="">All Months</option>
+                    @for(int i=1; i<=12; i++) {
+                        if(ViewBag.CurrentMonth == i) { <option value="@i" selected>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option> }
+                        else { <option value="@i">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option> }
+                    }
+                </select>
+                <select id="filterYear" class="form-select border-0 shadow-sm bg-light" style="width: 120px;">
+                    <option value="">All Years</option>
+                    @for(int i = DateTime.Now.Year; i >= DateTime.Now.Year - 2; i--) {
+                        if(ViewBag.CurrentYear == i) { <option value="@i" selected>@i</option> }
+                        else { <option value="@i">@i</option> }
+                    }
+                </select>
+                <button class="btn btn-outline-dark fw-semibold shadow-sm" onclick="applyFilters('@ViewBag.CurrentStatus')"><i class="fa-solid fa-filter"></i></button>
+            </div>
+        </div>
+
+        <table class="table table-hover align-middle border-bottom" id="complaintsTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="fw-semibold text-muted py-3">Ticket ID</th>
+                    <th class="fw-semibold text-muted py-3">Resident & Flat</th>
+                    <th class="fw-semibold text-muted py-3">Issue Details</th>
+                    <th class="fw-semibold text-muted py-3">Assignment</th>
+                    <th class="fw-semibold text-muted py-3 text-center">Status</th>
+                    <th class="fw-semibold text-muted py-3 text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if(complaints != null)
+                {
+                    foreach (var c in complaints)
+                    {
+                        <tr>
+                            <td class="fw-bold text-muted py-3">#TKT-@c.ComplaintId</td>
+                            <td class="py-3">
+                                <div class="fw-bold text-dark mb-1">@c.ResidentName</div>
+                                <div class="small"><span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Block @c.BlockName - @c.FlatNumber</span></div>
+                            </td>
+                            <td class="py-3" style="max-width: 250px;">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="badge @c.GetPriorityBadgeClass() me-2 rounded-pill shadow-sm" style="font-size: 0.65rem; padding: 0.35em 0.65em;">@c.Priority</span>
+                                    <span class="fw-bold text-dark text-truncate">@c.Title</span>
+                                </div>
+                                <div class="small text-muted text-truncate" title="@c.Category">
+                                    <i class="fa-solid fa-tag me-1"></i> @c.Category
+                                    @if (!string.IsNullOrEmpty(c.PhotoUrl))
+                                    {
+                                        <i class="fa-solid fa-image ms-2 text-primary" title="Photo Attached"></i>
+                                    }
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                @if (c.AssignedTo.HasValue)
+                                {
+                                    <div class="d-flex align-items-center">
+                                        <img src="https://ui-avatars.com/api/?name=@c.TechnicianName&background=random" class="rounded-circle me-2 shadow-sm" width="28" height="28" />
+                                        <span class="fw-semibold text-dark small">@c.TechnicianName</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-secondary border px-2 py-1"><i class="fa-solid fa-user-xmark me-1"></i> Unassigned</span>
+                                }
+                            </td>
+                            <td class="text-center py-3">
+                                <span class="badge @c.GetStatusBadgeClass() px-3 py-2 rounded-pill"><i class="@c.GetStatusIcon() me-1"></i> @c.Status</span>
+                                <div class="small text-muted mt-1" style="font-size: 0.70rem;"><i class="fa-regular fa-clock me-1"></i> @c.CreatedAt.ToString("dd MMM, HH:mm")</div>
+                            </td>
+                            <td class="py-3 text-end">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light border shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Actions
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                        <li>
+                                            <a class="dropdown-item py-2 fw-semibold text-primary" href="#" onclick="viewComplaint(@c.ComplaintId, '@Uri.EscapeDataString(c.Title)', '@Uri.EscapeDataString(c.Description)', '@c.ResidentName', '@c.Category', '@c.Status', '@Uri.EscapeDataString(c.AdminRemarks ?? "")', '@c.PhotoUrl')">
+                                                <i class="fa-solid fa-eye me-2"></i> View Details
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        @if(c.Status != "Resolved" && c.Status != "Closed")
+                                        {
+                                            <li>
+                                                <a class="dropdown-item py-2 fw-semibold text-success" href="#" onclick="openAssignModal(@c.ComplaintId, @(c.AssignedTo ?? 0))">
+                                                    <i class="fa-solid fa-user-plus me-2"></i> Assign Tech
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item py-2 fw-semibold text-warning" href="#" onclick="openStatusModal(@c.ComplaintId, '@c.Status', '@Uri.EscapeDataString(c.AdminRemarks ?? "")')">
+                                                    <i class="fa-solid fa-arrows-rotate me-2"></i> Update Status
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item py-2 fw-semibold text-dark" href="#" onclick="openEditModal(@c.ComplaintId, '@Uri.EscapeDataString(c.Title)', '@Uri.EscapeDataString(c.Description)', '@c.Category', '@c.Priority')">
+                                                    <i class="fa-solid fa-pen-to-square me-2"></i> Edit Details
+                                                </a>
+                                            </li>
+                                        }
+                                        <li>
+                                            <a class="dropdown-item py-2 fw-semibold text-danger" href="#" onclick="deleteComplaint(@c.ComplaintId)">
+                                                <i class="fa-solid fa-trash me-2"></i> Delete
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Raise Complaint Modal -->
+<div class="modal fade" id="raiseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-primary text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-ticket me-2"></i> Raise New Complaint</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="raiseForm" onsubmit="event.preventDefault(); submitRaise();">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Resident <span class="text-danger">*</span></label>
+                            <select id="raiseResident" name="raisedBy" class="form-select bg-light border-0 py-2" required>
+                                <option value="">-- Select Resident --</option>
+                                @foreach(var r in residents)
+                                {
+                                    <option value="@r.UserId">@r.FullName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Flat <span class="text-danger">*</span></label>
+                            <select id="raiseFlat" name="flatId" class="form-select bg-light border-0 py-2" required>
+                                <option value="">-- Select Flat --</option>
+                                @foreach(var f in flats)
+                                {
+                                    <option value="@f.FlatId">Block @f.BlockName - @f.FlatNumber</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Category <span class="text-danger">*</span></label>
+                            <select id="raiseCategory" name="category" class="form-select bg-light border-0 py-2" required>
+                                <option value="Plumbing">Plumbing</option>
+                                <option value="Electrical">Electrical</option>
+                                <option value="Cleaning">Cleaning / Housekeeping</option>
+                                <option value="Security">Security</option>
+                                <option value="Lift">Lift / Elevator</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Priority <span class="text-danger">*</span></label>
+                            <select id="raisePriority" name="priority" class="form-select bg-light border-0 py-2" required>
+                                <option value="Low">Low</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="High">High</option>
+                                <option value="Emergency">Emergency</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Title / Short Description <span class="text-danger">*</span></label>
+                            <input type="text" id="raiseTitle" name="title" class="form-control bg-light border-0 py-2" required placeholder="E.g., Water leaking in kitchen" maxlength="100" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Detailed Description <span class="text-danger">*</span></label>
+                            <textarea id="raiseDescription" name="description" class="form-control bg-light border-0" rows="3" required placeholder="Provide full details of the issue..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Attach Photo (Optional)</label>
+                            <input type="file" id="raisePhoto" name="photo" class="form-control bg-light border-0 py-2" accept="image/*" />
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4 rounded-pill shadow-sm fw-semibold" id="btnSubmitRaise">
+                            <i class="fa-solid fa-paper-plane me-2"></i> Submit Complaint
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Complaint Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-dark text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-pen-to-square me-2"></i> Edit Complaint</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="editForm" onsubmit="event.preventDefault(); submitEdit();">
+                    <input type="hidden" id="editComplaintId" name="complaintId" />
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Category <span class="text-danger">*</span></label>
+                            <select id="editCategory" name="category" class="form-select bg-light border-0 py-2" required>
+                                <option value="Plumbing">Plumbing</option>
+                                <option value="Electrical">Electrical</option>
+                                <option value="Cleaning">Cleaning / Housekeeping</option>
+                                <option value="Security">Security</option>
+                                <option value="Lift">Lift / Elevator</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Priority <span class="text-danger">*</span></label>
+                            <select id="editPriority" name="priority" class="form-select bg-light border-0 py-2" required>
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                                <option value="Emergency">Emergency</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Title <span class="text-danger">*</span></label>
+                            <input type="text" id="editTitle" name="title" class="form-control bg-light border-0 py-2" required maxlength="100" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Detailed Description <span class="text-danger">*</span></label>
+                            <textarea id="editDescription" name="description" class="form-control bg-light border-0" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-dark px-4 rounded-pill shadow-sm fw-semibold" id="btnSubmitEdit">
+                            <i class="fa-solid fa-save me-2"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Technician Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-success text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-plus me-2"></i> Assign Technician</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="assignForm" onsubmit="event.preventDefault(); submitAssign();">
+                    <input type="hidden" id="assignComplaintId" name="complaintId" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Select Technician <span class="text-danger">*</span></label>
+                        <select id="assignTech" name="assignedTo" class="form-select bg-light border-0 py-2" required>
+                            <option value="">-- Choose Technician --</option>
+                            @foreach(var t in technicians)
+                            {
+                                <option value="@t.UserId">@t.FullName (@t.Role)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success px-4 rounded-pill shadow-sm fw-semibold" id="btnSubmitAssign">
+                            <i class="fa-solid fa-check me-2"></i> Assign Task
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Status Modal -->
+<div class="modal fade" id="statusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-warning text-dark rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-arrows-rotate me-2"></i> Update Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="statusForm" onsubmit="event.preventDefault(); submitStatus();">
+                    <input type="hidden" id="statusComplaintId" name="complaintId" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">New Status <span class="text-danger">*</span></label>
+                        <select id="statusSelect" name="status" class="form-select bg-light border-0 py-2" required>
+                            <option value="Open">Open</option>
+                            <option value="InProgress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Admin Remarks (Optional)</label>
+                        <textarea id="statusRemarks" name="adminRemarks" class="form-control bg-light border-0" rows="3" placeholder="Add any notes about the resolution..."></textarea>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning px-4 rounded-pill shadow-sm fw-bold text-dark" id="btnSubmitStatus">
+                            <i class="fa-solid fa-save me-2"></i> Save Status
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Details Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-info text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-info me-2"></i> Complaint Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <h5 id="viewTitle" class="fw-bold text-dark mb-2">Title</h5>
+                <div class="d-flex gap-2 mb-3">
+                    <span class="badge bg-secondary" id="viewCategory">Category</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="viewStatus">Status</span>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-md-7">
+                        <h6 class="fw-bold text-muted small text-uppercase mb-2">Issue Description</h6>
+                        <div class="p-3 bg-light rounded-3 mb-4">
+                            <p class="mb-0 text-dark" id="viewDescription" style="white-space: pre-wrap; font-size: 0.95rem;">Description</p>
+                        </div>
+                        
+                        <h6 class="fw-bold text-muted small text-uppercase mb-2">Admin Remarks</h6>
+                        <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 mb-0">
+                            <p class="mb-0 text-dark fst-italic" id="viewRemarks" style="font-size: 0.95rem;">No remarks added yet.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <h6 class="fw-bold text-muted small text-uppercase mb-2">Attached Photo</h6>
+                        <div id="viewPhotoContainer" class="rounded-3 border overflow-hidden d-flex align-items-center justify-content-center bg-light" style="min-height: 200px;">
+                            <!-- Image will be injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pb-4 pe-4">
+                <button type="button" class="btn btn-light px-4 rounded-pill fw-semibold" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+        var raiseModal, assignModal, statusModal, viewModal, editModal;
+
+        $(document).ready(function () {
+            $('#complaintsTable').DataTable({
+                "pageLength": 25,
+                "ordering": false,
+                "responsive": true,
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search tickets..."
+                }
+            });
+            
+            raiseModal = new bootstrap.Modal(document.getElementById('raiseModal'));
+            assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+            statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+            viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
+            editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        });
+
+        function applyFilters(status) {
+            var url = '/Complaint?';
+            if (status) {
+                url += 'status=' + status + '&';
+            }
+            var month = $('#filterMonth').val();
+            var year = $('#filterYear').val();
+            if (month) url += 'month=' + month + '&';
+            if (year) url += 'year=' + year + '&';
+            
+            window.location.href = url;
+        }
+
+        function openRaiseModal() {
+            $('#raiseForm')[0].reset();
+            raiseModal.show();
+        }
+
+        function submitRaise() {
+            var form = $('#raiseForm')[0];
+            var formData = new FormData(form);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+
+            $('#btnSubmitRaise').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Submitting...');
+
+            $.ajax({
+                url: '/Complaint/Create',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmitRaise').prop('disabled', false).html('<i class="fa-solid fa-paper-plane me-2"></i> Submit Complaint');
+                    }
+                }
+            });
+        }
+
+        function openEditModal(id, title, desc, cat, priority) {
+            $('#editForm')[0].reset();
+            $('#editComplaintId').val(id);
+            $('#editTitle').val(decodeURIComponent(title));
+            $('#editDescription').val(decodeURIComponent(desc));
+            $('#editCategory').val(cat);
+            $('#editPriority').val(priority);
+            editModal.show();
+        }
+
+        function submitEdit() {
+            var form = $('#editForm')[0];
+            var formData = new FormData(form);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+
+            $('#btnSubmitEdit').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+
+            $.ajax({
+                url: '/Complaint/Edit',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmitEdit').prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Changes');
+                    }
+                }
+            });
+        }
+
+        function deleteComplaint(id) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this! The attached photo will also be deleted.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Complaint/Delete',
+                        type: 'POST',
+                        data: { complaintId: id, __RequestVerificationToken: token },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function openAssignModal(id, currentTech) {
+            $('#assignForm')[0].reset();
+            $('#assignComplaintId').val(id);
+            if(currentTech > 0) {
+                $('#assignTech').val(currentTech);
+            }
+            assignModal.show();
+        }
+
+        function submitAssign() {
+            var form = $('#assignForm')[0];
+            var formData = new FormData(form);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+
+            $('#btnSubmitAssign').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Assigning...');
+
+            $.ajax({
+                url: '/Complaint/Assign',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmitAssign').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Assign Task');
+                    }
+                }
+            });
+        }
+
+        function openStatusModal(id, status, remarks) {
+            $('#statusForm')[0].reset();
+            $('#statusComplaintId').val(id);
+            $('#statusSelect').val(status);
+            $('#statusRemarks').val(decodeURIComponent(remarks));
+            statusModal.show();
+        }
+
+        function submitStatus() {
+            var form = $('#statusForm')[0];
+            var formData = new FormData(form);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+
+            $('#btnSubmitStatus').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+
+            $.ajax({
+                url: '/Complaint/UpdateStatus',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmitStatus').prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Status');
+                    }
+                }
+            });
+        }
+        
+        function viewComplaint(id, title, desc, resident, cat, status, remarks, photoUrl) {
+            $('#viewTitle').text(decodeURIComponent(title));
+            $('#viewCategory').text(cat);
+            $('#viewStatus').text(status);
+            $('#viewDescription').text(decodeURIComponent(desc));
+            
+            var rem = decodeURIComponent(remarks);
+            if(rem) {
+                $('#viewRemarks').text(rem).removeClass('fst-italic').addClass('fw-semibold');
+            } else {
+                $('#viewRemarks').text('No remarks added yet.').addClass('fst-italic').removeClass('fw-semibold');
+            }
+
+            if(photoUrl && photoUrl !== '') {
+                $('#viewPhotoContainer').html('<img src="' + photoUrl + '" class="img-fluid w-100" style="object-fit: cover;" alt="Complaint Photo" />');
+            } else {
+                $('#viewPhotoContainer').html('<div class="text-center text-muted p-4"><i class="fa-solid fa-image-slash fs-1 mb-2 opacity-50"></i><p class="mb-0 small fw-semibold">No Photo Attached</p></div>');
+            }
+            
+            viewModal.show();
+        }
+    </script>
+}

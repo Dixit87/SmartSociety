@@ -1,0 +1,118 @@
+@model SmartSociety.Models.FlatUpsertViewModel
+
+@{
+    ViewData["Title"] = Model.Flat.FlatId == 0 ? "Add New Flat" : "Edit Flat";
+}
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-4">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item"><a asp-action="Index" class="text-decoration-none">Flat Management</a></li>
+    <li class="breadcrumb-item active fw-bold" aria-current="page">@ViewData["Title"]</li>
+  </ol>
+</nav>
+
+<div class="row">
+    <div class="col-12">
+        <div class="bg-white p-4 rounded-4 shadow-sm">
+            <div class="mb-4 pb-2 border-bottom">
+                <h3 class="fw-bold text-dark mb-0">@ViewData["Title"]</h3>
+                <p class="text-muted small">Fill in the details below to save the flat information.</p>
+            </div>
+            <div>
+                <form asp-action="Upsert" method="post">
+                    <input type="hidden" asp-for="Flat.FlatId" />
+                    
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label asp-for="Flat.BlockId" class="form-label fw-semibold"></label>
+                            <select asp-for="Flat.BlockId" asp-items="Model.BlockList" class="form-select bg-light border-0">
+                                <option value="">-- Select Block --</option>
+                            </select>
+                            <span asp-validation-for="Flat.BlockId" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Flat.FlatNumber" class="form-label fw-semibold"></label>
+                            <input asp-for="Flat.FlatNumber" class="form-control bg-light border-0" placeholder="e.g. 101, A-102" />
+                            <span asp-validation-for="Flat.FlatNumber" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label asp-for="Flat.FloorNumber" class="form-label fw-semibold"></label>
+                            <input asp-for="Flat.FloorNumber" type="number" class="form-control bg-light border-0" placeholder="e.g. 1" />
+                            <span asp-validation-for="Flat.FloorNumber" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Flat.FlatType" class="form-label fw-semibold"></label>
+                            <select asp-for="Flat.FlatType" class="form-select bg-light border-0">
+                                <option value="">-- Select Type --</option>
+                                <option value="1BHK">1BHK</option>
+                                <option value="2BHK">2BHK</option>
+                                <option value="3BHK">3BHK</option>
+                                <option value="4BHK">4BHK</option>
+                                <option value="Penthouse">Penthouse</option>
+                            </select>
+                            <span asp-validation-for="Flat.FlatType" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Flat.AreaSqFt" class="form-label fw-semibold"></label>
+                            <div class="input-group">
+                                <input asp-for="Flat.AreaSqFt" type="number" step="0.01" class="form-control bg-light border-0" placeholder="e.g. 1200" />
+                                <span class="input-group-text bg-light border-0 text-muted">Sq.Ft</span>
+                            </div>
+                            <span asp-validation-for="Flat.AreaSqFt" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Flat.IntercomNumber" class="form-label fw-semibold"></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0 text-muted"><i class="fa-solid fa-phone"></i></span>
+                                <input asp-for="Flat.IntercomNumber" type="text" class="form-control bg-light border-0" placeholder="e.g. 1101" />
+                            </div>
+                            <span asp-validation-for="Flat.IntercomNumber" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-4 mb-4">
+                        <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-users me-2"></i> Occupancy Details</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Flat.OwnerId" class="form-label fw-semibold"></label>
+                                <select asp-for="Flat.OwnerId" asp-items="Model.UserList" class="form-select bg-light border-0">
+                                    <option value="">-- Select Owner --</option>
+                                </select>
+                                <span asp-validation-for="Flat.OwnerId" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Flat.TenantId" class="form-label fw-semibold"></label>
+                                <select asp-for="Flat.TenantId" asp-items="Model.UserList" class="form-select bg-light border-0">
+                                    <option value="">-- Select Tenant (If Any) --</option>
+                                </select>
+                                <span asp-validation-for="Flat.TenantId" class="text-danger small"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" asp-for="Flat.IsActive" checked="@(Model.Flat.FlatId == 0 ? true : Model.Flat.IsActive)">
+                        <label class="form-check-label ms-2" asp-for="Flat.IsActive">Active Flat Status</label>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a asp-action="Index" class="btn btn-light px-4 rounded-pill fw-medium text-dark">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill fw-medium shadow-sm">
+                            <i class="fa-solid fa-save me-2"></i> @(Model.Flat.FlatId == 0 ? "Create Flat" : "Update Flat")
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

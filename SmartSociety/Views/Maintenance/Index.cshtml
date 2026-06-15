@@ -1,0 +1,571 @@
+@model IEnumerable<SmartSociety.Models.MaintenanceBill>
+
+@{
+    ViewData["Title"] = "Maintenance & Billing";
+    var stats = ViewBag.Stats as SmartSociety.Models.MaintenanceDashboardStats;
+}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-2">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item text-muted">Finance</li>
+    <li class="breadcrumb-item active fw-bold" aria-current="page">Maintenance Bills</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Maintenance & Billing</h2>
+        <p class="text-muted mb-0">Manage society monthly maintenance and extra funds.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <form method="get" class="d-flex gap-2 align-items-center bg-white p-1 rounded-pill shadow-sm border me-3">
+            <select name="month" class="form-select form-select-sm border-0 bg-transparent">
+                @for(int i=1; i<=12; i++)
+                {
+                    if(ViewBag.CurrentMonth == i) {
+                        <option value="@i" selected>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                    } else {
+                        <option value="@i">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                    }
+                }
+            </select>
+            <select name="year" class="form-select form-select-sm border-0 bg-transparent">
+                @for(int i=DateTime.Now.Year - 2; i<=DateTime.Now.Year + 1; i++)
+                {
+                    if(ViewBag.CurrentYear == i) {
+                        <option value="@i" selected>@i</option>
+                    } else {
+                        <option value="@i">@i</option>
+                    }
+                }
+            </select>
+            <button type="submit" class="btn btn-sm btn-light rounded-pill px-3"><i class="fa-solid fa-filter text-muted"></i></button>
+        </form>
+
+        <a asp-action="Settings" class="btn btn-outline-secondary px-3 py-2 fw-semibold rounded-pill shadow-sm">
+            <i class="fa-solid fa-gear me-1"></i> Settings
+        </a>
+        <button type="button" class="btn btn-danger px-4 py-2 fw-semibold rounded-pill shadow-sm" onclick="applyPenalties()" id="btnApplyPenalty">
+            <i class="fa-solid fa-gavel me-2"></i> Apply Penalties
+        </button>
+        <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill shadow-sm" onclick="openBulkGenerateModal()">
+            <i class="fa-solid fa-file-invoice-dollar me-2"></i> Generate Bulk Bills
+        </button>
+    </div>
+</div>
+
+<!-- Dashboard Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="bg-primary bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-wallet fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Expected This Month</p>
+                <h4 class="fw-bold text-dark mb-0">₹@stats?.TotalExpectedThisMonth.ToString("N0")</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-success bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-success text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-money-bill-trend-up fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Collected This Month</p>
+                <h4 class="fw-bold text-dark mb-0">₹@stats?.TotalCollectedThisMonth.ToString("N0")</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-warning bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-warning text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-hand-holding-dollar fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Total Pending Dues</p>
+                <h4 class="fw-bold text-dark mb-0">₹@stats?.TotalPendingOverall.ToString("N0")</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-danger bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-danger text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-triangle-exclamation fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Defaulters</p>
+                <h4 class="fw-bold text-dark mb-0">@stats?.TotalDefaulters <span class="fs-6 fw-normal text-muted">Flats</span></h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-4 shadow-sm p-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="billsTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Flat & Owner</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Month</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Bill Details</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Status</th>
+                    <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Action</th>
+                </tr>
+            </thead>
+            <tbody class="border-top-0">
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var bill in Model)
+                    {
+                        <tr>
+                            <td class="py-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle d-flex justify-content-center align-items-center text-muted me-3" style="width: 45px; height: 45px;">
+                                        <i class="fa-solid fa-building fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-dark">@bill.BlockName - @bill.FlatNumber</h6>
+                                        <div class="small text-muted">@bill.OwnerName</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <div class="fw-bold">@bill.DisplayMonthYear</div>
+                                <div class="small text-muted">Due: @bill.DueDate.ToString("dd MMM yyyy")</div>
+                            </td>
+                            <td class="py-3">
+                                <div class="fw-bold text-dark">₹@bill.TotalAmount.ToString("N0")</div>
+                                @if(bill.ExtraCharges > 0)
+                                {
+                                    <div class="small text-muted"><i class="fa-solid fa-plus fa-xs me-1"></i> ₹@bill.ExtraCharges (@bill.ExtraChargeRemarks)</div>
+                                }
+                                @if(bill.PenaltyAmount > 0)
+                                {
+                                    <div class="small text-danger"><i class="fa-solid fa-arrow-trend-up fa-xs me-1"></i> Penalty: ₹@bill.PenaltyAmount</div>
+                                }
+                                @if(bill.AmountPaid > 0)
+                                {
+                                    <div class="small text-success"><i class="fa-solid fa-check fa-xs me-1"></i> Paid: ₹@bill.AmountPaid.ToString("N0")</div>
+                                }
+                            </td>
+                            <td class="py-3">
+                                @if (bill.Status == "Paid")
+                                {
+                                    <span class="badge bg-success-subtle text-success px-2 py-1"><i class="fa-solid fa-check-double me-1"></i> Paid</span>
+                                }
+                                else if (bill.Status == "Partial")
+                                {
+                                    <span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="fa-solid fa-circle-half-stroke me-1"></i> Partial</span>
+                                }
+                                else
+                                {
+                                    @if(bill.DueDate < DateTime.Now)
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="fa-solid fa-circle-exclamation me-1"></i> Overdue</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary px-2 py-1"><i class="fa-solid fa-clock me-1"></i> Unpaid</span>
+                                    }
+                                }
+                            </td>
+                            <td class="py-3 text-end">
+                                <div class="btn-group shadow-sm rounded-pill">
+                                    @if (bill.Status != "Paid")
+                                    {
+                                        <button class="btn btn-sm btn-success px-3 fw-semibold border-0" onclick="openPaymentModal(@bill.BillId, @bill.BalanceAmount, '@bill.BlockName-@bill.FlatNumber', '@bill.DisplayMonthYear')" title="Pay Bill">
+                                            <i class="fa-solid fa-indian-rupee-sign"></i> Pay
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <a asp-action="Receipt" asp-route-id="@bill.BillId" class="btn btn-sm btn-outline-secondary px-3 fw-semibold border-0" title="View Receipt">
+                                            <i class="fa-solid fa-file-pdf"></i> Receipt
+                                        </a>
+                                    }
+                                    
+                                    <button class="btn btn-sm btn-light px-2 border-start" onclick="openEditBillModal(@bill.BillId, @bill.BaseAmount, @bill.ExtraCharges, '@(bill.ExtraChargeRemarks ?? "")')" title="Edit Bill">
+                                        <i class="fa-solid fa-pen text-primary"></i>
+                                    </button>
+                                    @if (bill.AmountPaid == 0)
+                                    {
+                                        <button class="btn btn-sm btn-light px-2 border-start text-danger" onclick="deleteBill(@bill.BillId)" title="Delete Bill">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Bulk Bill Generate Modal -->
+<div class="modal fade" id="bulkBillModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-primary text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-layer-group me-2"></i> Generate Bulk Bills</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="bulkForm" onsubmit="event.preventDefault(); submitBulkGenerate();">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Billing Month <span class="text-danger">*</span></label>
+                            <select id="bulkMonth" class="form-select bg-light border-0" required>
+                                @for(int i=1; i<=12; i++) {
+                                    if(ViewBag.CurrentMonth == i) { <option value="@i" selected>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option> }
+                                    else { <option value="@i">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option> }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Billing Year <span class="text-danger">*</span></label>
+                            <input type="number" id="bulkYear" class="form-control bg-light border-0" value="@ViewBag.CurrentYear" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Extra Charges (Festivals, Events etc.)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+                                <input type="number" id="extraCharges" class="form-control bg-light border-0" placeholder="0" min="0" step="0.01" />
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Remarks for Extra Charge</label>
+                            <input type="text" id="extraChargeRemarks" class="form-control bg-light border-0" placeholder="e.g. Diwali Celebration Fund" />
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4 rounded-pill shadow-sm fw-semibold" id="btnBulkGenerate">
+                            <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Generate Bills
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Record Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-success text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-indian-rupee-sign me-2"></i> Record Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="paymentForm" onsubmit="event.preventDefault(); submitPayment();">
+                    <input type="hidden" id="payBillId" />
+                    
+                    <div class="bg-light p-3 rounded-3 mb-4 text-center">
+                        <h6 class="text-muted mb-1" id="payFlatDetails">Block - Flat</h6>
+                        <h4 class="fw-bold mb-0 text-dark">Due: ₹<span id="payDueAmount">0</span></h4>
+                        <div class="small text-muted mt-1" id="payMonthYear">Month Year</div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Paying Amount <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+                                <input type="number" id="payAmount" class="form-control bg-light border-0 fw-bold" required min="1" step="0.01" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Payment Mode <span class="text-danger">*</span></label>
+                            <select id="payMode" class="form-select bg-light border-0" required>
+                                <option value="UPI">UPI</option>
+                                <option value="BankTransfer">Bank Transfer</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Cheque">Cheque</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Transaction ID</label>
+                            <input type="text" id="payTransactionId" class="form-control bg-light border-0" placeholder="Txn Ref No" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Remarks</label>
+                            <input type="text" id="payRemarks" class="form-control bg-light border-0" placeholder="Optional notes" />
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success px-4 rounded-pill shadow-sm fw-semibold" id="btnRecordPayment">
+                            <i class="fa-solid fa-check me-2"></i> Confirm Payment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Bill Modal -->
+<div class="modal fade" id="editBillModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-info text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-pen-to-square me-2"></i> Edit Bill Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="editBillForm" onsubmit="event.preventDefault(); submitEditBill();">
+                    <input type="hidden" id="editBillId" />
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Base Amount (₹) <span class="text-danger">*</span></label>
+                            <input type="number" id="editBaseAmount" class="form-control bg-light border-0" required min="0" step="0.01" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Extra Charges (₹)</label>
+                            <input type="number" id="editExtraCharges" class="form-control bg-light border-0" min="0" step="0.01" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Extra Charge Remarks</label>
+                            <input type="text" id="editRemarks" class="form-control bg-light border-0" placeholder="e.g. Penalty waived, Fest fund" />
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-info px-4 rounded-pill shadow-sm fw-semibold text-white" id="btnEditBill">
+                            <i class="fa-solid fa-save me-2"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+        var bulkModal;
+        var paymentModal;
+        var editModal;
+
+        $(document).ready(function () {
+            $('#billsTable').DataTable({
+                "pageLength": 25,
+                "ordering": false,
+                "responsive": true,
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search flats or owners..."
+                }
+            });
+            
+            bulkModal = new bootstrap.Modal(document.getElementById('bulkBillModal'));
+            paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+            editModal = new bootstrap.Modal(document.getElementById('editBillModal'));
+        });
+
+        function applyPenalties() {
+            Swal.fire({
+                title: 'Apply Penalties?',
+                text: "This will add the configured penalty amount to all unpaid overdue bills. Continue?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, apply'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $('#btnApplyPenalty').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Applying...');
+                    
+                    $.ajax({
+                        url: '/Maintenance/ApplyPenalties',
+                        type: 'POST',
+                        data: { __RequestVerificationToken: token },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({ icon: 'success', title: 'Done!', text: res.message, timer: 2000, showConfirmButton: false }).then(() => location.reload());
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                                $('#btnApplyPenalty').prop('disabled', false).html('<i class="fa-solid fa-gavel me-2"></i> Apply Penalties');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function openBulkGenerateModal() {
+            $('#bulkForm')[0].reset();
+            bulkModal.show();
+        }
+
+        function submitBulkGenerate() {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var data = {
+                month: $('#bulkMonth').val(),
+                year: $('#bulkYear').val(),
+                extraCharges: $('#extraCharges').val() || 0,
+                extraChargeRemarks: $('#extraChargeRemarks').val(),
+                __RequestVerificationToken: token
+            };
+
+            $('#btnBulkGenerate').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Generating...');
+
+            $.ajax({
+                url: '/Maintenance/GenerateBulkBills',
+                type: 'POST',
+                data: data,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: res.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnBulkGenerate').prop('disabled', false).html('<i class="fa-solid fa-wand-magic-sparkles me-2"></i> Generate Bills');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnBulkGenerate').prop('disabled', false).html('<i class="fa-solid fa-wand-magic-sparkles me-2"></i> Generate Bills');
+                }
+            });
+        }
+
+        function openPaymentModal(billId, dueAmount, flatInfo, monthYear) {
+            $('#paymentForm')[0].reset();
+            $('#payBillId').val(billId);
+            $('#payDueAmount').text(dueAmount);
+            $('#payAmount').val(dueAmount); // Pre-fill with exact due amount
+            $('#payFlatDetails').text('Flat: ' + flatInfo);
+            $('#payMonthYear').text('Bill: ' + monthYear);
+            paymentModal.show();
+        }
+
+        function submitPayment() {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var data = {
+                billId: $('#payBillId').val(),
+                paidAmount: $('#payAmount').val(),
+                paymentMode: $('#payMode').val(),
+                transactionId: $('#payTransactionId').val(),
+                remarks: $('#payRemarks').val(),
+                __RequestVerificationToken: token
+            };
+
+            $('#btnRecordPayment').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Processing...');
+
+            $.ajax({
+                url: '/Maintenance/RecordPayment',
+                type: 'POST',
+                data: data,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Payment Recorded!',
+                            text: res.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnRecordPayment').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Confirm Payment');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnRecordPayment').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Confirm Payment');
+                }
+            });
+        }
+
+        function openEditBillModal(id, base, extra, remarks) {
+            $('#editBillForm')[0].reset();
+            $('#editBillId').val(id);
+            $('#editBaseAmount').val(base);
+            $('#editExtraCharges').val(extra);
+            $('#editRemarks').val(remarks);
+            editModal.show();
+        }
+
+        function submitEditBill() {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var data = {
+                billId: $('#editBillId').val(),
+                baseAmount: $('#editBaseAmount').val(),
+                extraCharges: $('#editExtraCharges').val() || 0,
+                extraChargeRemarks: $('#editRemarks').val(),
+                __RequestVerificationToken: token
+            };
+
+            $('#btnEditBill').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+
+            $.ajax({
+                url: '/Maintenance/EditBill',
+                type: 'POST',
+                data: data,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnEditBill').prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Changes');
+                    }
+                }
+            });
+        }
+
+        function deleteBill(id) {
+            Swal.fire({
+                title: 'Delete Bill?',
+                text: "Are you sure you want to delete this bill? This cannot be undone.",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'Yes, delete it'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Maintenance/DeleteBill',
+                        type: 'POST',
+                        data: { billId: id, __RequestVerificationToken: token },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}

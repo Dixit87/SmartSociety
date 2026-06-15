@@ -1,0 +1,418 @@
+@model IEnumerable<SmartSociety.Models.Visitor>
+
+@{
+    ViewData["Title"] = "Visitor Logs";
+}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-2">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item text-muted">Gate Security</li>
+    <li class="breadcrumb-item active fw-bold" aria-current="page">Visitor Logs</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Gate Visitor Logs</h2>
+        <p class="text-muted mb-0">Track incoming guests, deliveries, and vendors.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <form asp-action="History" method="get" class="d-flex gap-2 align-items-center bg-white p-1 rounded-pill shadow-sm border me-3">
+            <input type="date" name="startDate" class="form-control form-control-sm border-0 bg-transparent" value="@ViewBag.StartDate" />
+            <span class="text-muted small">to</span>
+            <input type="date" name="endDate" class="form-control form-control-sm border-0 bg-transparent" value="@ViewBag.EndDate" />
+            <button type="submit" class="btn btn-sm btn-light rounded-pill px-3"><i class="fa-solid fa-filter text-muted"></i></button>
+            @if(ViewBag.StartDate != null) {
+                <a asp-action="Index" class="btn btn-sm btn-light rounded-pill px-2 text-danger" title="Clear Filter"><i class="fa-solid fa-xmark"></i></a>
+            }
+        </form>
+
+        <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill shadow-sm" onclick="openNewEntryModal()">
+            <i class="fa-solid fa-person-walking-arrow-right me-2"></i> New Visitor Entry
+        </button>
+    </div>
+</div>
+
+<!-- Dashboard Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="bg-primary bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-users fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Total</p>
+                <h4 class="fw-bold text-dark mb-0">@ViewBag.TotalToday</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-info bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-info text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-clock-rotate-left fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Pending Approval</p>
+                <h4 class="fw-bold text-dark mb-0">@(ViewBag.Pending ?? 0)</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-warning bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-warning text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-hourglass-half fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Inside</p>
+                <h4 class="fw-bold text-dark mb-0">@ViewBag.Inside</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="bg-success bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-success text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-person-walking-dashed-line-arrow-right fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Exited</p>
+                <h4 class="fw-bold text-dark mb-0">@ViewBag.Exited</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="bg-white rounded-4 shadow-sm p-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="visitorTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Visitor Info</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Visiting Flat</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">In-Time</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Status</th>
+                    <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Action</th>
+                </tr>
+            </thead>
+            <tbody class="border-top-0">
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var visitor in Model)
+                    {
+                        <tr class="@(visitor.IsOverstaying ? "bg-danger bg-opacity-10" : "")">
+                            <td class="py-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle d-flex justify-content-center align-items-center text-muted me-3" style="width: 45px; height: 45px;">
+                                        @if(visitor.VisitorType == "Guest") { <i class="fa-solid fa-user-group fa-lg"></i> }
+                                        else if(visitor.VisitorType == "Delivery") { <i class="fa-solid fa-box fa-lg"></i> }
+                                        else if(visitor.VisitorType == "Maid/Helper") { <i class="fa-solid fa-broom fa-lg"></i> }
+                                        else { <i class="fa-solid fa-id-badge fa-lg"></i> }
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-dark">@visitor.FullName</h6>
+                                        <div class="small text-muted"><i class="fa-solid fa-phone fa-sm me-1"></i> @visitor.PhoneNumber</div>
+                                        <span class="badge bg-secondary-subtle text-secondary px-2 py-0 mt-1">@visitor.VisitorType</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <div class="fw-bold text-dark">@visitor.BlockName - @visitor.FlatNumber</div>
+                                @if(!string.IsNullOrEmpty(visitor.Purpose))
+                                {
+                                    <div class="text-muted small fst-italic">"@visitor.Purpose"</div>
+                                }
+                                @if(!string.IsNullOrEmpty(visitor.VehicleNumber))
+                                {
+                                    <div class="text-muted small mt-1"><i class="fa-solid fa-car-side fa-sm me-1"></i> @visitor.VehicleNumber</div>
+                                }
+                            </td>
+                            <td class="py-3">
+                                <div class="fw-medium">@visitor.InTime.ToString("hh:mm tt")</div>
+                                <div class="small text-muted">@visitor.InTime.ToString("dd MMM yyyy")</div>
+                            </td>
+                            <td class="py-3">
+                                @if (visitor.Status == "Pending")
+                                {
+                                    <span class="badge bg-info-subtle text-info px-2 py-1"><i class="fa-solid fa-clock me-1"></i> Pending Approval</span>
+                                }
+                                else if (visitor.Status == "Inside")
+                                {
+                                    if(visitor.IsOverstaying)
+                                    {
+                                        <span class="badge bg-danger text-white px-2 py-1 shadow-sm"><i class="fa-solid fa-triangle-exclamation me-1"></i> Overstaying</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="fa-solid fa-clock me-1"></i> Inside</span>
+                                    }
+                                }
+                                else if (visitor.Status == "Rejected")
+                                {
+                                    <span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="fa-solid fa-xmark me-1"></i> Rejected</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success-subtle text-success px-2 py-1"><i class="fa-solid fa-check-double me-1"></i> Exited</span>
+                                    <div class="small text-muted mt-1">@visitor.OutTime?.ToString("hh:mm tt")</div>
+                                }
+                            </td>
+                            <td class="py-3 text-end">
+                                @if (visitor.Status == "Pending")
+                                {
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <button class="btn btn-sm btn-success rounded-pill px-3 fw-semibold shadow-sm" onclick="approveVisitor(@visitor.VisitorId, '@visitor.FullName')" title="Approve Entry">
+                                            <i class="fa-solid fa-check"></i> Approve
+                                        </button>
+                                        <button class="btn btn-sm btn-danger rounded-pill px-3 fw-semibold shadow-sm" onclick="rejectVisitor(@visitor.VisitorId, '@visitor.FullName')" title="Reject Entry">
+                                            <i class="fa-solid fa-xmark"></i> Reject
+                                        </button>
+                                    </div>
+                                }
+                                else if (visitor.Status == "Inside")
+                                {
+                                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-semibold shadow-sm" onclick="checkoutVisitor(@visitor.VisitorId, '@visitor.FullName')">
+                                        <i class="fa-solid fa-person-walking-arrow-right me-1"></i> Checkout
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- New Visitor Entry Modal -->
+<div class="modal fade" id="newEntryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-primary text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-plus me-2"></i> New Visitor Entry</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="entryForm" onsubmit="event.preventDefault(); submitEntry();">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Mobile Number <span class="text-danger">*</span></label>
+                            <input type="text" id="PhoneNumber" name="PhoneNumber" class="form-control bg-light border-0" required maxlength="15" placeholder="e.g. 9876543210" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" id="FullName" name="FullName" class="form-control bg-light border-0" required placeholder="e.g. Rahul Sharma" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Visitor Type <span class="text-danger">*</span></label>
+                            <select id="VisitorType" name="VisitorType" class="form-select bg-light border-0" required>
+                                <option value="">-- Select Type --</option>
+                                <option value="Guest">Guest / Relative</option>
+                                <option value="Delivery">Delivery (Amazon, Zomato, etc.)</option>
+                                <option value="Maid/Helper">Maid / Helper</option>
+                                <option value="Vendor">Maintenance / Vendor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Visiting Flat <span class="text-danger">*</span></label>
+                            <select id="FlatId" name="FlatId" class="form-select bg-light border-0" required>
+                                <option value="">Loading flats...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Vehicle Number (Optional)</label>
+                            <input type="text" id="VehicleNumber" name="VehicleNumber" class="form-control bg-light border-0" placeholder="e.g. MH-01-AB-1234" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Purpose of Visit (Optional)</label>
+                            <input type="text" id="Purpose" name="Purpose" class="form-control bg-light border-0" placeholder="e.g. Courier Delivery" />
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill shadow-sm fw-semibold" id="btnSubmit">
+                            <i class="fa-solid fa-check me-2"></i> Allow Entry
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+        var entryModal;
+
+        $(document).ready(function () {
+            $('#visitorTable').DataTable({
+                "pageLength": 10,
+                "ordering": false,
+                "responsive": true,
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search visitors..."
+                }
+            });
+            
+            entryModal = new bootstrap.Modal(document.getElementById('newEntryModal'));
+            loadFlats();
+        });
+
+        function loadFlats() {
+            $.ajax({
+                url: '/Visitor/GetFlatsDropdown',
+                type: 'GET',
+                success: function (res) {
+                    var select = $('#FlatId');
+                    select.empty();
+                    select.append('<option value="">-- Select Flat --</option>');
+                    res.forEach(function (f) {
+                        select.append(`<option value="${f.value}">${f.text}</option>`);
+                    });
+                }
+            });
+        }
+
+        function openNewEntryModal() {
+            $('#entryForm')[0].reset();
+            entryModal.show();
+        }
+
+        function submitEntry() {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var data = {
+                FullName: $('#FullName').val(),
+                PhoneNumber: $('#PhoneNumber').val(),
+                VisitorType: $('#VisitorType').val(),
+                FlatId: $('#FlatId').val(),
+                VehicleNumber: $('#VehicleNumber').val(),
+                Purpose: $('#Purpose').val(),
+                __RequestVerificationToken: token
+            };
+
+            $('#btnSubmit').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Processing...');
+
+            $.ajax({
+                url: '/Visitor/Entry',
+                type: 'POST',
+                data: data,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Entry Approved!',
+                            text: res.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmit').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Allow Entry');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnSubmit').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Allow Entry');
+                }
+            });
+        }
+
+        function checkoutVisitor(id, name) {
+            Swal.fire({
+                title: 'Confirm Checkout',
+                text: `Mark ${name} as Exited?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Checkout'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Visitor/Checkout/' + id,
+                        type: 'POST',
+                        data: { __RequestVerificationToken: token },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                Swal.fire('Error!', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function approveVisitor(id, name) {
+            Swal.fire({
+                title: 'Approve Entry',
+                text: `Allow ${name} to enter?`,
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Approve'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Visitor/Approve/' + id,
+                        type: 'POST',
+                        data: { __RequestVerificationToken: token },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                Swal.fire('Error!', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function rejectVisitor(id, name) {
+            Swal.fire({
+                title: 'Reject Entry',
+                text: `Deny entry for ${name}?`,
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Reject'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Visitor/Reject/' + id,
+                        type: 'POST',
+                        data: { __RequestVerificationToken: token },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                Swal.fire('Error!', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}

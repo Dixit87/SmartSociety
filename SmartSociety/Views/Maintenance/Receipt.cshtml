@@ -1,0 +1,180 @@
+@model SmartSociety.Models.MaintenanceReceiptViewModel
+
+@{
+    ViewData["Title"] = "Maintenance Receipt";
+    Layout = "_Layout"; // Or maybe no layout for printing
+}
+
+<style>
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+        .printable-area, .printable-area * {
+            visibility: visible;
+        }
+        .printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <a asp-action="Index" class="btn btn-light rounded-pill px-4 shadow-sm border"><i class="fa-solid fa-arrow-left me-2"></i> Back to Bills</a>
+        <button onclick="window.print()" class="btn btn-primary rounded-pill px-4 shadow-sm fw-semibold">
+            <i class="fa-solid fa-print me-2"></i> Print Receipt
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 printable-area">
+        <div class="card-body p-5">
+            <!-- Header -->
+            <div class="row border-bottom pb-4 mb-4">
+                <div class="col-sm-6">
+                    <h2 class="fw-bold text-primary mb-0"><i class="fa-solid fa-building me-2"></i> SmartSociety</h2>
+                    <p class="text-muted small mt-1 mb-0">123 Premium Lane, Tech City, 400001</p>
+                    <p class="text-muted small">Email: contact@smartsociety.com | Phone: +91 9876543210</p>
+                </div>
+                <div class="col-sm-6 text-sm-end text-start mt-4 mt-sm-0">
+                    <h3 class="text-muted fw-bold mb-1">PAYMENT RECEIPT</h3>
+                    <p class="mb-0"><strong>Receipt No:</strong> RCPT-@Model.Bill.BillYear-@Model.Bill.BillMonth-@Model.Bill.BillId</p>
+                    <p class="mb-0"><strong>Date:</strong> @DateTime.Now.ToString("dd MMM yyyy")</p>
+                </div>
+            </div>
+
+            <!-- Billed To -->
+            <div class="row mb-5">
+                <div class="col-sm-6">
+                    <h6 class="text-muted fw-bold text-uppercase mb-2">Billed To:</h6>
+                    <h5 class="fw-bold mb-1">@Model.Bill.OwnerName</h5>
+                    <p class="mb-0 text-dark fw-semibold">Block @Model.Bill.BlockName - Flat @Model.Bill.FlatNumber</p>
+                    @if (!string.IsNullOrEmpty(Model.Bill.TenantName))
+                    {
+                        <p class="text-muted small mb-0">Tenant: @Model.Bill.TenantName</p>
+                    }
+                </div>
+                <div class="col-sm-6 text-sm-end mt-4 mt-sm-0">
+                    <h6 class="text-muted fw-bold text-uppercase mb-2">Bill Summary:</h6>
+                    <p class="mb-1"><strong>Billing Month:</strong> @Model.Bill.DisplayMonthYear</p>
+                    <p class="mb-1"><strong>Due Date:</strong> @Model.Bill.DueDate.ToString("dd MMM yyyy")</p>
+                    @if(Model.Bill.Status == "Paid")
+                    {
+                        <span class="badge bg-success px-3 py-2 fs-6 mt-2"><i class="fa-solid fa-check-double me-1"></i> FULLY PAID</span>
+                    }
+                    else if (Model.Bill.Status == "Partial")
+                    {
+                        <span class="badge bg-warning px-3 py-2 fs-6 mt-2 text-dark"><i class="fa-solid fa-circle-half-stroke me-1"></i> PARTIALLY PAID</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger px-3 py-2 fs-6 mt-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> UNPAID</span>
+                    }
+                </div>
+            </div>
+
+            <!-- Bill Details Table -->
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered table-striped align-middle">
+                    <thead class="table-light text-muted">
+                        <tr>
+                            <th class="fw-semibold text-uppercase">Description</th>
+                            <th class="fw-semibold text-uppercase text-end" style="width: 150px;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Maintenance Charges for @Model.Bill.DisplayMonthYear</td>
+                            <td class="text-end">₹@Model.Bill.BaseAmount.ToString("N2")</td>
+                        </tr>
+                        @if (Model.Bill.ExtraCharges > 0)
+                        {
+                            <tr>
+                                <td>Extra Charges: @Model.Bill.ExtraChargeRemarks</td>
+                                <td class="text-end">₹@Model.Bill.ExtraCharges.ToString("N2")</td>
+                            </tr>
+                        }
+                        @if (Model.Bill.PenaltyAmount > 0)
+                        {
+                            <tr>
+                                <td>Late Payment Penalty</td>
+                                <td class="text-end">₹@Model.Bill.PenaltyAmount.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="fw-bold">
+                        <tr class="bg-light">
+                            <td class="text-end text-dark">Total Bill Amount:</td>
+                            <td class="text-end fs-5 text-dark">₹@Model.Bill.TotalAmount.ToString("N2")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Payment Logs Table -->
+            @if(Model.Payments != null && Model.Payments.Any())
+            {
+                <h6 class="text-muted fw-bold text-uppercase mb-3 mt-5"><i class="fa-solid fa-clock-rotate-left me-2"></i> Payment History:</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm table-hover align-middle border">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Mode</th>
+                                <th>Transaction Ref</th>
+                                <th>Remarks</th>
+                                <th class="text-end">Paid Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach(var p in Model.Payments)
+                            {
+                                <tr>
+                                    <td>@p.PaymentDate.ToString("dd MMM yyyy, hh:mm tt")</td>
+                                    <td><span class="badge bg-secondary">@p.PaymentMode</span></td>
+                                    <td>@(p.TransactionId ?? "-")</td>
+                                    <td>@(p.Remarks ?? "-")</td>
+                                    <td class="text-end text-success fw-bold">₹@p.PaidAmount.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="fw-bold bg-light">
+                            <tr>
+                                <td colspan="4" class="text-end">Total Amount Paid:</td>
+                                <td class="text-end text-success">₹@Model.Bill.AmountPaid.ToString("N2")</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+
+            <div class="row mt-5">
+                <div class="col-sm-6">
+                    @if(Model.Bill.BalanceAmount > 0)
+                    {
+                        <div class="alert alert-warning border-0 shadow-sm rounded-3">
+                            <h5 class="fw-bold mb-1"><i class="fa-solid fa-circle-exclamation me-2"></i> Balance Due: ₹@Model.Bill.BalanceAmount.ToString("N2")</h5>
+                            <p class="mb-0 small">Please pay the outstanding balance before the due date to avoid penalties.</p>
+                        </div>
+                    }
+                </div>
+                <div class="col-sm-6 text-end">
+                    <div class="mt-4 pt-4 border-top d-inline-block" style="min-width: 200px;">
+                        <p class="text-muted fw-bold mb-0">Authorized Signatory</p>
+                        <p class="small text-muted">SmartSociety Management</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-5">
+                <p class="text-muted small mb-0">Thank you for your timely payment. This is a computer-generated receipt and requires no physical signature.</p>
+            </div>
+        </div>
+    </div>
+</div>

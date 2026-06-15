@@ -1,0 +1,132 @@
+@model SmartSociety.Models.User
+
+@{
+    var isUpdate = Model.UserId > 0;
+    ViewData["Title"] = isUpdate ? "Update User" : "Create New User";
+}
+
+<div class="mb-4 d-flex align-items-center">
+    <a asp-action="Index" class="btn btn-light rounded-circle shadow-sm me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+        <i class="fa-solid fa-arrow-left text-muted"></i>
+    </a>
+    <div>
+        <h2 class="fw-bold mb-1">@(isUpdate ? "Edit User" : "Add New User")</h2>
+        <p class="text-muted mb-0">@(isUpdate ? "Update existing user information" : "Create a new user profile for the system")</p>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="bg-white rounded-4 shadow-sm p-4 p-md-5">
+            <form method="post" asp-action="Upsert" enctype="multipart/form-data">
+                <input type="hidden" asp-for="UserId" />
+                <input type="hidden" asp-for="CreatedAt" />
+                <!-- Keep the hash in case it's an update and no new password is provided -->
+                <input type="hidden" asp-for="PasswordHash" />
+
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-4 rounded bg-danger-subtle p-3"></div>
+
+                <h5 class="fw-bold text-dark mb-4 border-bottom pb-2">Personal Information</h5>
+                
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="FullName" class="form-label fw-semibold text-secondary">Full Name <span class="text-danger">*</span></label>
+                        <input asp-for="FullName" class="form-control form-control-lg bg-light" placeholder="e.g. John Doe" />
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Role" class="form-label fw-semibold text-secondary">Role <span class="text-danger">*</span></label>
+                        <select asp-for="Role" class="form-select form-select-lg bg-light">
+                            <option value="">-- Select Role --</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Resident">Resident</option>
+                            <option value="Guard">Security Guard</option>
+                            <option value="Accountant">Accountant</option>
+                            <option value="Technician">Technician</option>
+                        </select>
+                        <span asp-validation-for="Role" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="PhoneNumber" class="form-label fw-semibold text-secondary">Phone Number <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-phone text-muted"></i></span>
+                            <input asp-for="PhoneNumber" class="form-control form-control-lg bg-light border-start-0" placeholder="e.g. +91 9876543210" />
+                        </div>
+                        <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Email" class="form-label fw-semibold text-secondary">Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-envelope text-muted"></i></span>
+                            <input asp-for="Email" class="form-control form-control-lg bg-light border-start-0" placeholder="e.g. john@example.com" />
+                        </div>
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="Password" class="form-label fw-semibold text-secondary">Password @Html.Raw(isUpdate ? "(Leave blank to keep current)" : "<span class=\"text-danger\">*</span>")</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-lock text-muted"></i></span>
+                            <input asp-for="Password" type="password" class="form-control form-control-lg bg-light border-start-0" placeholder="Enter password" />
+                        </div>
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <h5 class="fw-bold text-dark mb-4 border-bottom pb-2 mt-5">Additional Details</h5>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="FlatNumber" class="form-label fw-semibold text-secondary">Flat / Block Number</label>
+                        <input asp-for="FlatNumber" class="form-control form-control-lg bg-light" placeholder="e.g. A-101" />
+                        <span asp-validation-for="FlatNumber" class="text-danger small"></span>
+                        <div class="form-text">Relevant primarily for Residents.</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-secondary">Profile Image Upload</label>
+                        <input type="file" name="profileImage" class="form-control form-control-lg bg-light" accept="image/*" />
+                        <div class="form-text">Choose an image file (JPG, PNG).</div>
+                        
+                        <input type="hidden" asp-for="ProfilePicture" />
+                        @if (!string.IsNullOrEmpty(Model.ProfilePicture))
+                        {
+                            <div class="mt-2 d-flex align-items-center">
+                                <img src="@Model.ProfilePicture" alt="Current Profile" class="rounded-circle shadow-sm me-2" style="width: 50px; height: 50px; object-fit: cover;" />
+                                <span class="small text-muted">Current Image</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="mb-5 bg-light p-3 rounded-3 border">
+                    <div class="form-check form-switch form-check-lg d-flex align-items-center">
+                        <input class="form-check-input mt-0 me-3" type="checkbox" role="switch" asp-for="IsActive" style="width: 3em; height: 1.5em; cursor: pointer;">
+                        <label class="form-check-label fw-semibold mb-0" asp-for="IsActive" style="cursor: pointer;">
+                            Active User Account
+                            <small class="d-block text-muted fw-normal">Inactive users cannot log into the system.</small>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-3 justify-content-end pt-3 border-top">
+                    <a asp-action="Index" class="btn btn-light px-4 py-2 fw-semibold rounded-pill">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold rounded-pill shadow-sm">
+                        <i class="fa-solid fa-save me-2"></i> @(isUpdate ? "Save Changes" : "Create User")
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,98 @@
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var role = HttpContextAccessor.HttpContext?.Request.Cookies["MockRole"] ?? "Admin";
+}
+
+<div class="sidebar d-flex flex-column p-3 text-white bg-dark-glass">
+    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none sidebar-brand">
+        <i class="fa-solid fa-building me-2"></i>
+        <span class="fs-4 fw-bold">SmartSociety</span>
+    </a>
+    <hr>
+    <ul class="nav nav-pills flex-column mb-auto sidebar-nav">
+        
+        @if (role == "Admin")
+        {
+            <li class="nav-item"><a href="#" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
+            <li><a asp-controller="User" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-users-gear me-2"></i> User Management</a></li>
+            <li><a asp-controller="Flat" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-building-user me-2"></i> Resident & Flat Management</a></li>
+            <li><a asp-controller="Parking" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-car me-2"></i> Parking Management</a></li>
+            <li><a asp-controller="Visitor" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-door-open me-2"></i> Visitor Logs</a></li>
+            <li><a asp-controller="Maintenance" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-credit-card me-2"></i> Maintenance & Billing</a></li>
+            <li><a asp-controller="Utility" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-faucet-drip me-2"></i> Meter & Utility Management</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-sack-dollar me-2"></i> Financial Accounts & Expenses</a></li>
+            <li><a asp-controller="Complaint" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-tower-observation me-2"></i> Complaint Helpdesk</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-regular fa-calendar-check me-2"></i> Amenity & Facility Booking</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-user-shield me-2"></i> Staff & Guard Control</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-toolbox me-2"></i> Assets & Vendor Management</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-bullhorn me-2"></i> Notice Board</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-check-to-slot me-2"></i> Polls & Voting</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-envelope-open-text me-2"></i> Communication Center</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-regular fa-folder-open me-2"></i> Document Management</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-chart-line me-2"></i> Reports & Analytics</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-magnifying-glass-chart me-2"></i> Audit Logs</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-gears me-2"></i> System Settings & Backup</a></li>
+        }
+        else if (role == "Resident")
+        {
+            <li class="nav-item"><a href="#" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-credit-card me-2"></i> My Maintenance & Bills</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-faucet me-2"></i> Utility Usage Tracker</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-headset me-2"></i> Helpdesk & Complaints</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-car-side me-2"></i> My Visitors Log</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-regular fa-calendar-plus me-2"></i> Amenity Booking</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-bullhorn me-2"></i> Notice Board & Voting</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-regular fa-folder me-2"></i> My Documents</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-bell me-2"></i> Notifications</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-user-gear me-2"></i> Profile & Family Settings</a></li>
+        }
+        else if (role == "Guard")
+        {
+            <li class="nav-item"><a href="#" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-person-walking-arrow-right me-2"></i> Visitor Entry</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-person-walking-dashed-line-arrow-right me-2"></i> Visitor Exit</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-box me-2"></i> Delivery Management</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-clipboard-list me-2"></i> Visitor Logs</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-address-book me-2"></i> Resident Directory</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-triangle-exclamation text-danger me-2"></i> Emergency Alerts</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-id-badge me-2"></i> My Profile</a></li>
+        }
+        else if (role == "Accountant")
+        {
+            <li class="nav-item"><a href="#" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
+            <li><a asp-controller="Maintenance" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-file-invoice-dollar me-2"></i> Maintenance & Billing</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-hand-holding-dollar me-2"></i> Payment Collection</a></li>
+            <li><a asp-controller="Utility" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-file-invoice me-2"></i> Utility Billing</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-money-bill-transfer me-2"></i> Expenses Management</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-chart-column me-2"></i> Financial Reports</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-file-pdf me-2"></i> Financial Documents</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-id-card me-2"></i> My Profile</a></li>
+        }
+        else if (role == "Technician")
+        {
+            <li class="nav-item"><a href="#" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-screwdriver-wrench me-2"></i> Assigned Complaints</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-list-check me-2"></i> Work Progress</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-clipboard-check me-2"></i> Daily Tasks</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-triangle-exclamation me-2"></i> Asset Service Requests</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-clock-rotate-left me-2"></i> Work History</a></li>
+            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-id-card me-2"></i> My Profile</a></li>
+        }
+    </ul>
+    
+    <hr>
+    <div class="dropdown sidebar-user">
+        <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="https://ui-avatars.com/api/?name=@role&background=random" alt="" width="32" height="32" class="rounded-circle me-2">
+            <strong>@role</strong>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+            <li><a class="dropdown-item" href="#">Settings</a></li>
+            <li><a class="dropdown-item" href="#">Profile</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#">Sign out</a></li>
+        </ul>
+    </div>
+</div>

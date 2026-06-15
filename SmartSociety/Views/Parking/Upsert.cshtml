@@ -1,0 +1,124 @@
+@model SmartSociety.Models.ParkingSlotUpsertViewModel
+
+@{
+    ViewData["Title"] = Model.ParkingSlot.SlotId == 0 ? "Add Parking Slot" : "Edit Parking Slot";
+}
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-4">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item"><a asp-action="Index" class="text-decoration-none">Parking Management</a></li>
+    <li class="breadcrumb-item active fw-bold" aria-current="page">@ViewData["Title"]</li>
+  </ol>
+</nav>
+
+<div class="row">
+    <div class="col-12">
+        <div class="bg-white p-4 rounded-4 shadow-sm">
+            <div class="mb-4 pb-2 border-bottom">
+                <h3 class="fw-bold text-dark mb-0">@ViewData["Title"]</h3>
+                <p class="text-muted small">Fill in the details below to save or update the parking slot.</p>
+            </div>
+            <div>
+                <form asp-action="Upsert" method="post">
+                    <input type="hidden" asp-for="ParkingSlot.SlotId" />
+                    
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="border-start border-4 border-primary ps-3 mb-4">
+                        <h6 class="fw-bold text-dark mb-1">Slot Details</h6>
+                        <p class="text-muted small mb-0">Define the physical parking slot.</p>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label asp-for="ParkingSlot.SlotNumber" class="form-label fw-semibold"></label>
+                            <input asp-for="ParkingSlot.SlotNumber" class="form-control bg-light border-0" placeholder="e.g. Basement-A-01, Ground-105" />
+                            <span asp-validation-for="ParkingSlot.SlotNumber" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="ParkingSlot.VehicleType" class="form-label fw-semibold"></label>
+                            <select asp-for="ParkingSlot.VehicleType" class="form-select bg-light border-0">
+                                <option value="">-- Select Vehicle Type --</option>
+                                <option value="2-Wheeler">2-Wheeler (Bike/Scooter)</option>
+                                <option value="4-Wheeler">4-Wheeler (Car/SUV)</option>
+                            </select>
+                            <span asp-validation-for="ParkingSlot.VehicleType" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-white d-block">.</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" role="switch" asp-for="ParkingSlot.IsVisitorSlot" id="visitorSlotToggle">
+                                <label class="form-check-label fw-bold text-primary" for="visitorSlotToggle">Mark as Visitor Slot</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="allocationSection">
+                        <div class="border-start border-4 border-success ps-3 mb-4 mt-5">
+                            <h6 class="fw-bold text-dark mb-1">Allocation Details (Optional)</h6>
+                            <p class="text-muted small mb-0">Assign this slot to a flat and record the vehicle information.</p>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label asp-for="ParkingSlot.FlatId" class="form-label fw-semibold"></label>
+                                <select asp-for="ParkingSlot.FlatId" asp-items="Model.FlatList" class="form-select bg-light border-0">
+                                    <option value="">-- Available (Not Assigned) --</option>
+                                </select>
+                                <span asp-validation-for="ParkingSlot.FlatId" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ParkingSlot.VehicleNumber" class="form-label fw-semibold"></label>
+                                <input asp-for="ParkingSlot.VehicleNumber" class="form-control bg-light border-0" placeholder="e.g. MH-02-AB-1234" />
+                                <span asp-validation-for="ParkingSlot.VehicleNumber" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ParkingSlot.VehicleMakeModel" class="form-label fw-semibold"></label>
+                                <input asp-for="ParkingSlot.VehicleMakeModel" class="form-control bg-light border-0" placeholder="e.g. Honda City - White" />
+                                <span asp-validation-for="ParkingSlot.VehicleMakeModel" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ParkingSlot.StickerNumber" class="form-label fw-semibold"></label>
+                                <input asp-for="ParkingSlot.StickerNumber" class="form-control bg-light border-0" placeholder="e.g. STK-2026-001" />
+                                <span asp-validation-for="ParkingSlot.StickerNumber" class="text-danger small"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 form-check form-switch mt-4 pt-3 border-top">
+                        <input class="form-check-input" type="checkbox" role="switch" asp-for="ParkingSlot.IsActive" checked="@(Model.ParkingSlot.SlotId == 0 ? true : Model.ParkingSlot.IsActive)">
+                        <label class="form-check-label ms-2" asp-for="ParkingSlot.IsActive">Active Slot Status</label>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a asp-action="Index" class="btn btn-light px-4 rounded-pill fw-medium text-dark">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill fw-medium shadow-sm">
+                            <i class="fa-solid fa-save me-2"></i> @(Model.ParkingSlot.SlotId == 0 ? "Create Slot" : "Update Slot")
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function() {
+            function toggleAllocationSection() {
+                if ($('#visitorSlotToggle').is(':checked')) {
+                    $('#allocationSection').slideUp();
+                } else {
+                    $('#allocationSection').slideDown();
+                }
+            }
+
+            $('#visitorSlotToggle').change(toggleAllocationSection);
+            
+            // Initial call
+            toggleAllocationSection();
+        });
+    </script>
+}
