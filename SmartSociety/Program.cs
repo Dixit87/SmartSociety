@@ -1,5 +1,7 @@
 using Microsoft.Data.SqlClient;
 using System.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using SmartSociety.Repositories;
 
 namespace SmartSociety
 {
@@ -19,15 +21,39 @@ namespace SmartSociety
             builder.Services.AddScoped<IDbConnection>(sp => 
                 new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+            // Configure Cookie Authentication
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/Auth/Login";
+                    options.LogoutPath = "/Auth/Logout";
+                    options.AccessDeniedPath = "/Auth/AccessDenied";
+                    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+                    options.SlidingExpiration = true;
+                });
+
             // Register Repositories
-            builder.Services.AddScoped<SmartSociety.Repositories.IUserRepository, SmartSociety.Repositories.UserRepository>();
-            builder.Services.AddScoped<SmartSociety.Repositories.IBlockRepository, SmartSociety.Repositories.BlockRepository>();
-            builder.Services.AddScoped<SmartSociety.Repositories.IFlatRepository, SmartSociety.Repositories.FlatRepository>();
-            builder.Services.AddScoped<SmartSociety.Repositories.IParkingRepository, SmartSociety.Repositories.ParkingRepository>();
-            builder.Services.AddScoped<SmartSociety.Repositories.IVisitorRepository, SmartSociety.Repositories.VisitorRepository>();
-            builder.Services.AddScoped<SmartSociety.Repositories.IMaintenanceRepository, SmartSociety.Repositories.MaintenanceRepository>();
-            builder.Services.AddScoped<SmartSociety.Repositories.IUtilityRepository, SmartSociety.Repositories.UtilityRepository>();
-            builder.Services.AddScoped<SmartSociety.Repositories.IComplaintRepository, SmartSociety.Repositories.ComplaintRepository>();
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddScoped<IBlockRepository, BlockRepository>();
+            builder.Services.AddScoped<IFlatRepository, FlatRepository>();
+            builder.Services.AddScoped<IParkingRepository, ParkingRepository>();
+            builder.Services.AddScoped<IVisitorRepository, VisitorRepository>();
+            builder.Services.AddScoped<IMaintenanceRepository, MaintenanceRepository>();
+            builder.Services.AddScoped<IUtilityRepository, UtilityRepository>();
+            builder.Services.AddScoped<IComplaintRepository, ComplaintRepository>();
+            builder.Services.AddScoped<IFinanceRepository, FinanceRepository>();
+            builder.Services.AddScoped<IAmenityRepository, AmenityRepository>();
+            builder.Services.AddScoped<IStaffRepository, StaffRepository>();
+            builder.Services.AddScoped<INoticeRepository, NoticeRepository>();
+            builder.Services.AddScoped<IAssetVendorRepository, AssetVendorRepository>();
+            builder.Services.AddScoped<IPollRepository, PollRepository>();
+            builder.Services.AddScoped<ICommunicationRepository, CommunicationRepository>();
+            builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
+            builder.Services.AddScoped<IReportRepository, ReportRepository>();
+            builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+            builder.Services.AddScoped<ISettingRepository, SettingRepository>();
+            builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+            builder.Services.AddScoped<IAuthRepository, AuthRepository>(); // Auth repo
 
             var app = builder.Build();
 
@@ -35,13 +61,14 @@ namespace SmartSociety
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
 
             app.UseHttpsRedirection();
             app.UseRouting();
 
+            // Add Authentication before Authorization
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapStaticAssets();

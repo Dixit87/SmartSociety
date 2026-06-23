@@ -1,0 +1,148 @@
+@model IEnumerable<SmartSociety.Models.AuditLog>
+
+@{
+    ViewData["Title"] = "Audit Logs";
+}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+        <li class="breadcrumb-item text-muted">Admin</li>
+        <li class="breadcrumb-item active fw-bold" aria-current="page">Audit Logs</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-shield-halved text-primary me-2"></i> System Audit Logs</h2>
+        <p class="text-muted mb-0">Immutable tracking of all system activities and security events.</p>
+    </div>
+    <button class="btn btn-outline-primary fw-bold px-4 rounded-pill shadow-sm" onclick="exportLogs()">
+        <i class="fa-solid fa-download me-2"></i> Export Logs
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+        <div class="alert alert-info border-0 bg-info bg-opacity-10 text-info-emphasis d-flex align-items-center mb-4 rounded-3" role="alert">
+            <i class="fa-solid fa-circle-info fs-4 me-3"></i>
+            <div>
+                <strong>Security Notice:</strong> This is a read-only view. Audit records cannot be modified or deleted to ensure compliance and traceability.
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle w-100" id="logsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="fw-semibold text-muted py-3">Timestamp</th>
+                        <th class="fw-semibold text-muted py-3">User</th>
+                        <th class="fw-semibold text-muted py-3">Action</th>
+                        <th class="fw-semibold text-muted py-3">Module</th>
+                        <th class="fw-semibold text-muted py-3">Description</th>
+                        <th class="fw-semibold text-muted py-3 text-end">IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model)
+                    {
+                        var badgeClass = "bg-secondary";
+                        var iconClass = "fa-circle-dot";
+
+                        switch (log.ActionType.ToLower())
+                        {
+                            case "create":
+                                badgeClass = "bg-success-subtle text-success border border-success border-opacity-25";
+                                iconClass = "fa-plus";
+                                break;
+                            case "update":
+                                badgeClass = "bg-warning-subtle text-warning-emphasis border border-warning border-opacity-25";
+                                iconClass = "fa-pen";
+                                break;
+                            case "delete":
+                                badgeClass = "bg-danger-subtle text-danger border border-danger border-opacity-25";
+                                iconClass = "fa-trash";
+                                break;
+                            case "login":
+                            case "auth":
+                                badgeClass = "bg-info-subtle text-info border border-info border-opacity-25";
+                                iconClass = "fa-arrow-right-to-bracket";
+                                break;
+                        }
+
+                        <tr>
+                            <td class="py-3">
+                                <span class="d-none">@log.Timestamp.ToString("yyyyMMddHHmmss")</span> <!-- For sorting -->
+                                <div class="fw-bold text-dark">@log.Timestamp.ToString("dd MMM yyyy")</div>
+                                <div class="small text-muted">@log.Timestamp.ToString("hh:mm tt")</div>
+                            </td>
+                            <td class="py-3 fw-bold text-dark">
+                                <i class="fa-solid fa-user text-muted me-1"></i> @log.Username
+                            </td>
+                            <td class="py-3">
+                                <span class="badge @badgeClass px-3 py-2 rounded-pill">
+                                    <i class="fa-solid @iconClass me-1"></i> @log.ActionType
+                                </span>
+                            </td>
+                            <td class="py-3 fw-semibold text-muted">@log.ModuleName</td>
+                            <td class="py-3">
+                                <span class="text-truncate d-inline-block" style="max-width: 300px;" title="@log.Description">
+                                    @log.Description
+                                </span>
+                            </td>
+                            <td class="py-3 text-end font-monospace small text-muted">
+                                <i class="fa-solid fa-globe me-1"></i> @(log.IPAddress ?? "Unknown")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#logsTable').DataTable({
+                "order": [[0, "desc"]], // Sort by Timestamp descending by default
+                "pageLength": 15,
+                "language": {
+                    "search": "",
+                    "searchPlaceholder": "Search logs..."
+                },
+                "dom": "<'row mb-3'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6 d-flex justify-content-end'f>>" +
+                       "<'row'<'col-sm-12'tr>>" +
+                       "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>"
+            });
+            
+            $('.dataTables_filter input').addClass('form-control form-control-sm border-0 shadow-sm bg-light').css('width', '250px');
+        });
+
+        function exportLogs() {
+            Swal.fire({
+                title: 'Exporting Logs',
+                text: 'Preparing a secure CSV export of all audit logs...',
+                timer: 2000,
+                timerProgressBar: true,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            }).then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Export Successful',
+                    text: 'The audit_logs.csv file has been generated.',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+            });
+        }
+    </script>
+}

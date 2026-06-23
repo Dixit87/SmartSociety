@@ -1,0 +1,363 @@
+@model IEnumerable<SmartSociety.Models.SocietyDocument>
+
+@{
+    ViewData["Title"] = "Document Management";
+}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+<style>
+    .doc-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        font-size: 24px;
+    }
+</style>
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+        <li class="breadcrumb-item text-muted">Admin</li>
+        <li class="breadcrumb-item active fw-bold" aria-current="page">Document Management</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1 text-dark"><i class="fa-regular fa-folder-open text-primary me-2"></i> Document Vault</h2>
+        <p class="text-muted mb-0">Securely store and manage society policies, audit reports, and forms.</p>
+    </div>
+    <button class="btn btn-primary fw-bold px-4 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadModal">
+        <i class="fa-solid fa-cloud-arrow-up me-2"></i> Upload Document
+    </button>
+</div>
+
+<!-- Documents List -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+        <table class="table table-hover align-middle w-100" id="docsTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="fw-semibold text-muted py-3" style="width: 50px;">Type</th>
+                    <th class="fw-semibold text-muted py-3">Document Title</th>
+                    <th class="fw-semibold text-muted py-3">Category</th>
+                    <th class="fw-semibold text-muted py-3">Upload Date</th>
+                    <th class="fw-semibold text-muted py-3">Visibility</th>
+                    <th class="fw-semibold text-muted py-3 text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var doc in Model)
+                {
+                    var extension = System.IO.Path.GetExtension(doc.FilePath).ToLower();
+                    var iconClass = "fa-file text-secondary bg-secondary-subtle";
+                    
+                    if (extension == ".pdf") iconClass = "fa-file-pdf text-danger bg-danger-subtle";
+                    else if (extension == ".doc" || extension == ".docx") iconClass = "fa-file-word text-primary bg-primary-subtle";
+                    else if (extension == ".xls" || extension == ".xlsx") iconClass = "fa-file-excel text-success bg-success-subtle";
+                    else if (extension == ".jpg" || extension == ".jpeg" || extension == ".png") iconClass = "fa-file-image text-info bg-info-subtle";
+
+                    <tr>
+                        <td class="py-3">
+                            <div class="doc-icon @iconClass.Split(' ')[2]">
+                                <i class="fa-solid @iconClass.Split(' ')[0] @iconClass.Split(' ')[1]"></i>
+                            </div>
+                        </td>
+                        <td class="py-3">
+                            <h6 class="fw-bold text-dark mb-1">@doc.Title</h6>
+                            <span class="small text-muted fw-semibold">@extension.Replace(".", "").ToUpper() File</span>
+                        </td>
+                        <td class="py-3">
+                            <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">@doc.Category</span>
+                        </td>
+                        <td class="py-3 text-muted small fw-semibold">@doc.UploadedAt.ToString("dd MMM yyyy")</td>
+                        <td class="py-3">
+                            @if (doc.IsVisibleToResidents)
+                            {
+                                <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill"><i class="fa-solid fa-eye me-1"></i> Public</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning-subtle text-warning-emphasis px-3 py-2 rounded-pill"><i class="fa-solid fa-lock me-1"></i> Private (Admin)</span>
+                            }
+                        </td>
+                        <td class="py-3 text-end">
+                            <div class="btn-group shadow-sm">
+                                <a href="@doc.FilePath" target="_blank" class="btn btn-light btn-sm text-primary" title="Download / View">
+                                    <i class="fa-solid fa-download"></i>
+                                </a>
+                                <button type="button" class="btn btn-light btn-sm text-info" title="Edit Document" onclick="openEditModal(@doc.DocumentId, '@Uri.EscapeDataString(doc.Title)', '@doc.Category', @(doc.IsVisibleToResidents ? "true" : "false"), '@doc.FilePath')">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button type="button" class="btn btn-light btn-sm text-danger" title="Delete Document" onclick="deleteDocument(@doc.DocumentId)">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Upload Document Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-light rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-cloud-arrow-up text-primary me-2"></i> Upload Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="uploadForm" onsubmit="event.preventDefault(); submitUpload();" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Document Title <span class="text-danger">*</span></label>
+                        <input type="text" id="dTitle" name="Title" class="form-control bg-light border-0 py-2" required placeholder="e.g. Audit Report 2025" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Category <span class="text-danger">*</span></label>
+                        <select id="dCategory" name="Category" class="form-select bg-light border-0 py-2" required>
+                            <option value="">-- Select Category --</option>
+                            <option value="Audit Reports">Audit & Financial Reports</option>
+                            <option value="Policies & Rules">Policies & Society Rules</option>
+                            <option value="Meeting Minutes">Minutes of Meeting</option>
+                            <option value="Forms & Templates">Forms & Templates</option>
+                            <option value="Notices">Official Notices</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small text-muted mb-1">Select File <span class="text-danger">*</span></label>
+                        <input type="file" id="dFile" name="File" class="form-control border border-1 py-2" required accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" />
+                        <div class="form-text small">Accepted formats: PDF, Word, Excel, Images (Max 10MB)</div>
+                    </div>
+
+                    <div class="mb-4 p-3 bg-light rounded-3 border border-1">
+                        <div class="form-check form-switch d-flex align-items-center">
+                            <input class="form-check-input mt-0 me-3" type="checkbox" role="switch" id="dVisible" name="IsVisibleToResidents" style="transform: scale(1.2);">
+                            <label class="form-check-label mb-0" for="dVisible">
+                                <span class="fw-bold text-dark d-block">Make Visible to Residents</span>
+                                <span class="small text-muted">If checked, residents can view and download this file from their portal.</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="text-end border-top pt-3 mt-3">
+                        <button type="button" class="btn btn-light px-4 rounded-pill fw-semibold me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4 rounded-pill shadow-sm fw-bold" id="btnUpload">
+                            <i class="fa-solid fa-upload me-2"></i> Upload File
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Document Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-light rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-pen text-info me-2"></i> Edit Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="editForm" onsubmit="event.preventDefault(); submitEdit();">
+                    <input type="hidden" id="eDocId" name="DocumentId" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Document Title <span class="text-danger">*</span></label>
+                        <input type="text" id="eTitle" name="Title" class="form-control bg-light border-0 py-2" required />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Category <span class="text-danger">*</span></label>
+                        <select id="eCategory" name="Category" class="form-select bg-light border-0 py-2" required>
+                            <option value="">-- Select Category --</option>
+                            <option value="Audit Reports">Audit & Financial Reports</option>
+                            <option value="Policies & Rules">Policies & Society Rules</option>
+                            <option value="Meeting Minutes">Minutes of Meeting</option>
+                            <option value="Forms & Templates">Forms & Templates</option>
+                            <option value="Notices">Official Notices</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Current File</label>
+                        <div class="p-2 bg-light rounded border border-1 d-flex align-items-center">
+                            <i class="fa-solid fa-file-pdf text-danger fs-4 me-3 ms-2"></i>
+                            <a href="#" id="eCurrentFileLink" target="_blank" class="fw-bold text-decoration-none">View Current Document</a>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small text-muted mb-1">Replace File (Optional)</label>
+                        <input type="file" id="eFile" name="File" class="form-control border border-1 py-2" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" />
+                        <div class="form-text small text-warning"><i class="fa-solid fa-circle-info me-1"></i> Uploading a new file will permanently delete the old one. Leave empty to keep current file.</div>
+                    </div>
+
+                    <div class="mb-4 p-3 bg-light rounded-3 border border-1">
+                        <div class="form-check form-switch d-flex align-items-center">
+                            <input class="form-check-input mt-0 me-3" type="checkbox" role="switch" id="eVisible" name="IsVisibleToResidents" style="transform: scale(1.2);">
+                            <label class="form-check-label mb-0" for="eVisible">
+                                <span class="fw-bold text-dark d-block">Make Visible to Residents</span>
+                                <span class="small text-muted">If checked, residents can view and download this file from their portal.</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="text-end border-top pt-3 mt-3">
+                        <button type="button" class="btn btn-light px-4 rounded-pill fw-semibold me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-info px-4 rounded-pill shadow-sm fw-bold text-white" id="btnEdit">
+                            <i class="fa-solid fa-save me-2"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#docsTable').DataTable({
+                "pageLength": 10,
+                "ordering": false,
+                "language": { "search": "", "searchPlaceholder": "Search documents..." },
+                "dom": "<'row mb-3'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6 d-flex justify-content-end'f>>" +
+                       "<'row'<'col-sm-12'tr>>" +
+                       "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>"
+            });
+            $('.dataTables_filter input').addClass('form-control form-control-sm border-0 shadow-sm bg-light').css('width', '250px');
+        });
+
+        function submitUpload() {
+            var formData = new FormData();
+            formData.append('Title', $('#dTitle').val());
+            formData.append('Category', $('#dCategory').val());
+            formData.append('IsVisibleToResidents', $('#dVisible').is(':checked'));
+            formData.append('File', $('#dFile')[0].files[0]);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+
+            var btn = $('#btnUpload');
+            btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Uploading...');
+
+            $.ajax({
+                url: '/Document/UploadDocument',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        btn.prop('disabled', false).html('<i class="fa-solid fa-upload me-2"></i> Upload File');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An error occurred during upload.', 'error');
+                    btn.prop('disabled', false).html('<i class="fa-solid fa-upload me-2"></i> Upload File');
+                }
+            });
+        }
+
+        function deleteDocument(id) {
+            Swal.fire({
+                title: 'Delete Document?',
+                text: "This will permanently delete the file from the server. Cannot be undone.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Document/DeleteDocument',
+                        type: 'POST',
+                        data: { documentId: id, __RequestVerificationToken: token },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                                setTimeout(() => window.location.reload(), 1500);
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        var editModal;
+        $(document).ready(function() {
+            editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        });
+
+        function openEditModal(id, title, category, isVisible, filePath) {
+            $('#eDocId').val(id);
+            $('#eTitle').val(decodeURIComponent(title));
+            $('#eCategory').val(category);
+            $('#eVisible').prop('checked', isVisible);
+            $('#eCurrentFileLink').attr('href', filePath);
+            $('#eFile').val(''); // Clear file input
+            editModal.show();
+        }
+
+        function submitEdit() {
+            var formData = new FormData();
+            formData.append('DocumentId', $('#eDocId').val());
+            formData.append('Title', $('#eTitle').val());
+            formData.append('Category', $('#eCategory').val());
+            formData.append('IsVisibleToResidents', $('#eVisible').is(':checked'));
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+
+            var fileInput = $('#eFile')[0];
+            if (fileInput.files.length > 0) {
+                formData.append('File', fileInput.files[0]);
+            }
+
+            var btn = $('#btnEdit');
+            btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+
+            $.ajax({
+                url: '/Document/EditDocument',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        btn.prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Changes');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An error occurred during save.', 'error');
+                    btn.prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Changes');
+                }
+            });
+        }
+    </script>
+}

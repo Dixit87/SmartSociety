@@ -1,0 +1,254 @@
+@model SmartSociety.Models.SettingsViewModel
+
+@{
+    ViewData["Title"] = "System Settings";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+        <li class="breadcrumb-item text-muted">Admin</li>
+        <li class="breadcrumb-item active fw-bold" aria-current="page">System Settings</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h2 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-gears text-primary me-2"></i> System Settings & Backup</h2>
+    <p class="text-muted mb-0">Manage global society configuration and secure database backups.</p>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white border-bottom pt-3 pb-0 px-4 rounded-top-4">
+        <ul class="nav nav-tabs border-bottom-0" id="settingTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold py-3 text-dark border-0 border-bottom border-3 border-primary" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button" role="tab" style="background: none;">
+                    <i class="fa-solid fa-building me-2"></i> General Info
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold py-3 text-muted border-0" id="finance-tab" data-bs-toggle="tab" data-bs-target="#finance" type="button" role="tab" style="background: none;" onclick="switchTab(this)">
+                    <i class="fa-solid fa-money-bill-wave me-2"></i> Finance Defaults
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold py-3 text-muted border-0" id="backup-tab" data-bs-toggle="tab" data-bs-target="#backup" type="button" role="tab" style="background: none;" onclick="switchTab(this)">
+                    <i class="fa-solid fa-database me-2"></i> Database Backup
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body p-4">
+        <div class="tab-content" id="settingTabsContent">
+            
+            <!-- Tab 1: General Info -->
+            <div class="tab-pane fade show active" id="general" role="tabpanel">
+                <form id="generalForm" onsubmit="event.preventDefault(); submitSettings();">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Society Name <span class="text-danger">*</span></label>
+                            <input type="text" id="sName" class="form-control bg-light border-0 py-2" value="@Model.Settings.SocietyName" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Registration Number</label>
+                            <input type="text" id="sRegNo" class="form-control bg-light border-0 py-2" value="@Model.Settings.RegistrationNo" />
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold text-muted small mb-1">Address</label>
+                            <textarea id="sAddress" class="form-control bg-light border-0 py-2" rows="3">@Model.Settings.Address</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Contact Email</label>
+                            <input type="email" id="sEmail" class="form-control bg-light border-0 py-2" value="@Model.Settings.ContactEmail" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Contact Phone</label>
+                            <input type="text" id="sPhone" class="form-control bg-light border-0 py-2" value="@Model.Settings.ContactPhone" />
+                        </div>
+                    </div>
+                    <div class="mt-4 text-end">
+                        <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold shadow-sm" id="btnSaveGen">
+                            <i class="fa-solid fa-save me-2"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tab 2: Finance -->
+            <div class="tab-pane fade" id="finance" role="tabpanel">
+                <form id="financeForm" onsubmit="event.preventDefault(); submitSettings();">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Currency Symbol <span class="text-danger">*</span></label>
+                            <select id="sCurrency" class="form-select bg-light border-0 py-2" required>
+                                <option value="₹" selected="@(Model.Settings.CurrencySymbol == "₹")">₹ (INR)</option>
+                                <option value="$" selected="@(Model.Settings.CurrencySymbol == "$")">$ (USD)</option>
+                                <option value="€" selected="@(Model.Settings.CurrencySymbol == "€")">€ (EUR)</option>
+                                <option value="£" selected="@(Model.Settings.CurrencySymbol == "£")">£ (GBP)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Default Penalty on Late Payment (%) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.1" min="0" max="100" id="sPenalty" class="form-control bg-light border-0 py-2" value="@Model.Settings.DefaultPenaltyPercentage" required />
+                        </div>
+                    </div>
+                    <div class="mt-4 text-end">
+                        <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold shadow-sm" id="btnSaveFin">
+                            <i class="fa-solid fa-save me-2"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tab 3: Backup -->
+            <div class="tab-pane fade" id="backup" role="tabpanel">
+                <div class="alert alert-warning border-0 bg-warning bg-opacity-10 text-warning-emphasis d-flex align-items-center mb-4 rounded-3" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation fs-3 me-3"></i>
+                    <div>
+                        <strong>Important:</strong> Taking a database backup might momentarily slow down the portal. Ensure SQL Server has permission to write to the `wwwroot/backups` directory.
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0 text-dark">Backup History</h5>
+                    <button class="btn btn-dark px-4 rounded-pill fw-bold shadow-sm" id="btnBackup" onclick="createBackup()">
+                        <i class="fa-solid fa-server me-2"></i> Create New Backup (.bak)
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="py-3 text-muted fw-semibold">Date & Time</th>
+                                <th class="py-3 text-muted fw-semibold">File Name</th>
+                                <th class="py-3 text-muted fw-semibold">Size</th>
+                                <th class="py-3 text-muted fw-semibold text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Backups.Any())
+                            {
+                                foreach (var b in Model.Backups)
+                                {
+                                    <tr>
+                                        <td class="py-3 fw-bold text-dark">@b.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")</td>
+                                        <td class="py-3 text-muted"><i class="fa-solid fa-file-zipper text-secondary me-2"></i>@b.FileName</td>
+                                        <td class="py-3"><span class="badge bg-light text-dark border">@b.SizeMB MB</span></td>
+                                        <td class="py-3 text-end">
+                                            <a href="@b.FilePath" download class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3">
+                                                <i class="fa-solid fa-download me-1"></i> Download
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 text-muted">
+                                        <i class="fa-solid fa-database fs-1 mb-3 text-secondary opacity-50"></i>
+                                        <h5>No Backups Found</h5>
+                                        <p>Click "Create New Backup" to generate your first snapshot.</p>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function switchTab(clickedTab) {
+            $('.nav-link').removeClass('active text-dark border-bottom border-3 border-primary').addClass('text-muted');
+            $(clickedTab).removeClass('text-muted').addClass('active text-dark border-bottom border-3 border-primary');
+        }
+
+        function submitSettings() {
+            var data = {
+                SocietyName: $('#sName').val(),
+                RegistrationNo: $('#sRegNo').val(),
+                Address: $('#sAddress').val(),
+                ContactEmail: $('#sEmail').val(),
+                ContactPhone: $('#sPhone').val(),
+                CurrencySymbol: $('#sCurrency').val(),
+                DefaultPenaltyPercentage: $('#sPenalty').val(),
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            };
+
+            var btnG = $('#btnSaveGen');
+            var btnF = $('#btnSaveFin');
+            
+            btnG.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+            btnF.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+
+            $.ajax({
+                url: '/Setting/UpdateSettings',
+                type: 'POST',
+                data: data,
+                success: function (res) {
+                    btnG.prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Changes');
+                    btnF.prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Changes');
+                    
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                },
+                error: function () {
+                    btnG.prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Changes');
+                    btnF.prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Changes');
+                    Swal.fire('Error', 'An error occurred.', 'error');
+                }
+            });
+        }
+
+        function createBackup() {
+            Swal.fire({
+                title: 'Creating Database Backup',
+                html: 'Please wait while SQL Server takes a snapshot of your data...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading()
+                }
+            });
+
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            $.ajax({
+                url: '/Setting/CreateBackup',
+                type: 'POST',
+                data: { __RequestVerificationToken: token },
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Backup Successful!',
+                            text: 'File generated: ' + res.fileName,
+                            showConfirmButton: true
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Backup Failed',
+                            text: res.message
+                        });
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                }
+            });
+        }
+    </script>
+}

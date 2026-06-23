@@ -14,52 +14,52 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="bg-light" style="overflow: hidden;">
-    <div class="d-flex w-100 vh-100">
+    <div class="d-flex flex-nowrap" style="height: 100vh; width: 100vw; overflow: hidden;">
         <!-- Sidebar -->
         <partial name="_Sidebar" />
 
         <!-- Main Content Area -->
-        <div class="flex-grow-1 d-flex flex-column h-100" style="background-color: #f8fafc; overflow-y: auto; overflow-x: hidden;">
-            @{
-                var currentRole = Context.Request.Cookies["MockRole"] ?? "Admin";
-                var roles = new[] { "Admin", "Resident", "Guard", "Accountant", "Technician" };
-            }
-            <!-- Top Navbar -->
+        <div class="d-flex flex-column w-100" style="background-color: #f8fafc; height: 100vh; overflow-y: auto;">
+            
             <header class="top-header bg-white shadow-sm px-4 py-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center">
-                    <button class="btn btn-light me-3" id="sidebarToggle">
+                    <button class="btn btn-light d-md-none me-3" type="button" id="sidebarToggle">
                         <i class="fa-solid fa-bars"></i>
                     </button>
-                    <h5 class="mb-0 text-muted">@ViewData["Title"]</h5>
+                    <h5 class="mb-0 fw-bold text-dark d-none d-md-block">
+                        @{
+                            var role = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "Guest";
+                            if (role == "Admin") { <text>Admin Dashboard</text> }
+                            else if (role == "Resident") { <text>Resident Portal</text> }
+                            else if (role == "Guard") { <text>Security Post</text> }
+                            else { <text>SmartSociety</text> }
+                        }
+                    </h5>
                 </div>
                 
                 <div class="d-flex align-items-center">
-                    <!-- Mock Role Switcher -->
-                    <form asp-controller="Home" asp-action="ChangeRole" method="post" class="d-flex align-items-center me-3">
-                        <label class="me-2 text-muted small fw-bold">Mock Role:</label>
-                        <select name="role" class="form-select form-select-sm w-auto shadow-sm" onchange="this.form.submit()">
-                            @foreach(var r in roles)
-                            {
-                                if(currentRole == r)
-                                {
-                                    <option value="@r" selected>@r</option>
-                                }
-                                else
-                                {
-                                    <option value="@r">@r</option>
-                                }
-                            }
-                        </select>
-                    </form>
-                    
+                    <!-- Profile Dropdown -->
                     <div class="dropdown">
-                        <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle" id="dropdownUser2" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="https://ui-avatars.com/api/?name=@currentRole&background=random" alt="" width="32" height="32" class="rounded-circle me-2">
+                        <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="bg-light rounded-circle p-2 me-2">
+                                <i class="fa-solid fa-user text-primary"></i>
+                            </div>
+                            <span class="d-none d-md-inline fw-medium">@User.Identity?.Name</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="dropdownUser2">
-                            <li><a class="dropdown-item" href="#">Profile</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" aria-labelledby="dropdownUser">
+                            <li>
+                                <div class="px-3 py-2">
+                                    <span class="d-block fw-bold text-dark">@User.Identity?.Name</span>
+                                    <span class="d-block small text-muted">Role: @(User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value)</span>
+                                </div>
+                            </li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#">Sign out</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fa-solid fa-gear me-2 text-muted"></i> Settings</a></li>
+                            <li>
+                                <form asp-controller="Auth" asp-action="Logout" method="post" id="logoutForm" class="d-inline">
+                                    <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Sign out</button>
+                                </form>
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -71,7 +71,7 @@
             </main>
 
             <!-- Footer -->
-            <footer class="footer text-muted p-4 bg-white border-top mt-auto">
+            <footer class="text-muted p-4 bg-white border-top mt-auto" style="position: relative; z-index: 10;">
                 <div class="container-fluid text-center">
                     &copy; 2026 - SmartSociety - Premium Edition
                 </div>

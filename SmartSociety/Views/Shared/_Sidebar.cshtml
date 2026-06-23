@@ -2,38 +2,38 @@
 @inject IHttpContextAccessor HttpContextAccessor
 
 @{
-    var role = HttpContextAccessor.HttpContext?.Request.Cookies["MockRole"] ?? "Admin";
+    var role = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "Guest";
 }
 
-<div class="sidebar d-flex flex-column p-3 text-white bg-dark-glass">
+<div class="sidebar d-flex flex-column flex-shrink-0 p-3 text-white bg-dark" style="height: 100vh; overflow-y: auto; overflow-x: hidden;">
     <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none sidebar-brand">
         <i class="fa-solid fa-building me-2"></i>
         <span class="fs-4 fw-bold">SmartSociety</span>
     </a>
     <hr>
     <ul class="nav nav-pills flex-column mb-auto sidebar-nav">
-        
+
         @if (role == "Admin")
         {
-            <li class="nav-item"><a href="#" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
+            <li class="nav-item"><a asp-controller="Home" asp-action="Index" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
             <li><a asp-controller="User" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-users-gear me-2"></i> User Management</a></li>
             <li><a asp-controller="Flat" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-building-user me-2"></i> Resident & Flat Management</a></li>
             <li><a asp-controller="Parking" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-car me-2"></i> Parking Management</a></li>
             <li><a asp-controller="Visitor" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-door-open me-2"></i> Visitor Logs</a></li>
             <li><a asp-controller="Maintenance" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-credit-card me-2"></i> Maintenance & Billing</a></li>
             <li><a asp-controller="Utility" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-faucet-drip me-2"></i> Meter & Utility Management</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-sack-dollar me-2"></i> Financial Accounts & Expenses</a></li>
+            <li><a asp-controller="Finance" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-sack-dollar me-2"></i> Financial Accounts & Expenses</a></li>
             <li><a asp-controller="Complaint" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-tower-observation me-2"></i> Complaint Helpdesk</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-regular fa-calendar-check me-2"></i> Amenity & Facility Booking</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-user-shield me-2"></i> Staff & Guard Control</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-toolbox me-2"></i> Assets & Vendor Management</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-bullhorn me-2"></i> Notice Board</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-check-to-slot me-2"></i> Polls & Voting</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-envelope-open-text me-2"></i> Communication Center</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-regular fa-folder-open me-2"></i> Document Management</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-chart-line me-2"></i> Reports & Analytics</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-magnifying-glass-chart me-2"></i> Audit Logs</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-gears me-2"></i> System Settings & Backup</a></li>
+            <li><a asp-controller="Amenity" asp-action="Index" class="nav-link text-white"><i class="fa-regular fa-calendar-check me-2"></i> Amenity & Facility Booking</a></li>
+            <li><a asp-controller="Staff" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-user-shield me-2"></i> Staff & Guard Control</a></li>
+            <li><a asp-controller="AssetVendor" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-toolbox me-2"></i> Assets & Vendor Management</a></li>
+            <li><a asp-controller="Notice" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-bullhorn me-2"></i> Notice Board</a></li>
+            <li><a asp-controller="Poll" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-check-to-slot me-2"></i> Polls & Voting</a></li>
+            <li><a asp-controller="Communication" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-envelope-open-text me-2"></i> Communication Center</a></li>
+            <li><a asp-controller="Document" asp-action="Index" class="nav-link text-white"><i class="fa-regular fa-folder-open me-2"></i> Document Management</a></li>
+            <li><a asp-controller="Report" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-chart-line me-2"></i> Reports & Analytics</a></li>
+            <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-magnifying-glass-chart me-2"></i> Audit Logs</a></li>
+            <li><a asp-controller="Setting" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-gears me-2"></i> System Settings & Backup</a></li>
         }
         else if (role == "Resident")
         {
@@ -81,7 +81,7 @@
             <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-id-card me-2"></i> My Profile</a></li>
         }
     </ul>
-    
+
     <hr>
     <div class="dropdown sidebar-user">
         <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">

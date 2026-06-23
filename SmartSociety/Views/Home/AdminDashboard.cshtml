@@ -1,0 +1,401 @@
+@model SmartSociety.Models.AdminDashboardViewModel
+
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1 text-dark">Welcome back, Admin! 👋</h2>
+        <p class="text-muted mb-0">Here's what's happening in your society today, @DateTime.Now.ToString("dd MMMM yyyy").</p>
+    </div>
+    <div>
+        <button class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
+            <i class="fa-solid fa-download me-2"></i> Download Daily Report
+        </button>
+    </div>
+</div>
+
+<!-- 1. KPI Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-primary bg-opacity-10 hover-lift">
+            <div class="card-body p-3 text-center">
+                <div class="bg-primary text-white rounded-circle d-inline-flex justify-content-center align-items-center mb-3 shadow-sm" style="width: 50px; height: 50px; font-size: 20px;">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+                <h3 class="fw-bold text-dark mb-1">@Model.KPIs.TotalFlats</h3>
+                <h6 class="text-primary-emphasis fw-semibold mb-0 small text-uppercase">Total Flats</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-success bg-opacity-10 hover-lift">
+            <div class="card-body p-3 text-center">
+                <div class="bg-success text-white rounded-circle d-inline-flex justify-content-center align-items-center mb-3 shadow-sm" style="width: 50px; height: 50px; font-size: 20px;">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <h3 class="fw-bold text-dark mb-1">@Model.KPIs.TotalResidents</h3>
+                <h6 class="text-success-emphasis fw-semibold mb-0 small text-uppercase">Residents</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-info bg-opacity-10 hover-lift">
+            <div class="card-body p-3 text-center">
+                <div class="bg-info text-white rounded-circle d-inline-flex justify-content-center align-items-center mb-3 shadow-sm" style="width: 50px; height: 50px; font-size: 20px;">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <h3 class="fw-bold text-dark mb-1">@Model.KPIs.ActiveStaff</h3>
+                <h6 class="text-info-emphasis fw-semibold mb-0 small text-uppercase">Active Staff</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-warning bg-opacity-10 hover-lift">
+            <div class="card-body p-3 text-center">
+                <div class="bg-warning text-white rounded-circle d-inline-flex justify-content-center align-items-center mb-3 shadow-sm" style="width: 50px; height: 50px; font-size: 20px;">
+                    <i class="fa-solid fa-headset"></i>
+                </div>
+                <h3 class="fw-bold text-dark mb-1">@Model.KPIs.OpenComplaints</h3>
+                <h6 class="text-warning-emphasis fw-semibold mb-0 small text-uppercase">Open Tickets</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-danger bg-opacity-10 hover-lift">
+            <div class="card-body p-3 text-center">
+                <div class="bg-danger text-white rounded-circle d-inline-flex justify-content-center align-items-center mb-3 shadow-sm" style="width: 50px; height: 50px; font-size: 20px;">
+                    <i class="fa-solid fa-bullhorn"></i>
+                </div>
+                <h3 class="fw-bold text-dark mb-1">@Model.KPIs.ActiveNotices</h3>
+                <h6 class="text-danger-emphasis fw-semibold mb-0 small text-uppercase">Active Notices</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-2">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-dark hover-lift">
+            <div class="card-body p-3 text-center">
+                <div class="bg-white text-dark rounded-circle d-inline-flex justify-content-center align-items-center mb-3 shadow-sm" style="width: 50px; height: 50px; font-size: 20px;">
+                    <i class="fa-solid fa-indian-rupee-sign"></i>
+                </div>
+                <h3 class="fw-bold text-white mb-1">@Model.KPIs.TotalRevenueThisMonth.ToString("N0")</h3>
+                <h6 class="text-white-50 fw-semibold mb-0 small text-uppercase">Revenue (This Month)</h6>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Quick Actions -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+    <div class="card-body p-4">
+        <h6 class="fw-bold text-muted mb-3 text-uppercase small">Quick Actions</h6>
+        <div class="d-flex gap-3 flex-wrap">
+            <a asp-controller="Notice" asp-action="Index" class="btn btn-outline-primary rounded-pill px-4 fw-semibold border-2"><i class="fa-solid fa-bullhorn me-2"></i> New Notice</a>
+            <a asp-controller="Complaint" asp-action="Index" class="btn btn-outline-warning text-dark rounded-pill px-4 fw-semibold border-2"><i class="fa-solid fa-headset me-2"></i> View Complaints</a>
+            <a asp-controller="Maintenance" asp-action="Index" class="btn btn-outline-success rounded-pill px-4 fw-semibold border-2"><i class="fa-solid fa-file-invoice-dollar me-2"></i> Generate Bills</a>
+            <a asp-controller="Visitor" asp-action="Index" class="btn btn-outline-info text-dark rounded-pill px-4 fw-semibold border-2"><i class="fa-solid fa-door-open me-2"></i> Pre-Approve Visitor</a>
+            <a asp-controller="Communication" asp-action="Index" class="btn btn-outline-dark rounded-pill px-4 fw-semibold border-2"><i class="fa-solid fa-envelope me-2"></i> Send Email Blast</a>
+        </div>
+    </div>
+</div>
+
+<!-- 2.5. Charts Row -->
+<div class="row g-4 mb-4">
+    <!-- Revenue Trend Chart -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-bottom pt-4 pb-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-chart-line text-primary me-2"></i> Revenue & Collection Trend</h5>
+            </div>
+            <div class="card-body p-4">
+                <div style="position: relative; height:300px;">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Complaint Stats Chart -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-bottom pt-4 pb-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-chart-pie text-warning me-2"></i> Complaints</h5>
+            </div>
+            <div class="card-body p-4 d-flex justify-content-center align-items-center">
+                <div style="position: relative; height:250px; width:100%;">
+                    <canvas id="complaintChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Two Columns: Live Activity Feed -->
+<div class="row g-4 mb-5">
+    
+    <!-- Left Column: Recent Visitors & Complaints -->
+    <div class="col-lg-6">
+        <!-- Recent Complaints -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4 h-50">
+            <div class="card-header bg-white border-bottom pt-4 pb-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-clipboard-list text-warning me-2"></i> Action Desk (Recent Complaints)</h5>
+                <a asp-controller="Complaint" asp-action="Index" class="text-decoration-none small fw-bold">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush rounded-bottom-4">
+                    @if (Model.RecentComplaints.Any())
+                    {
+                        foreach(var c in Model.RecentComplaints)
+                        {
+                            <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1 fw-bold text-dark">@c.TicketNumber</h6>
+                                    <div class="small text-muted"><i class="fa-regular fa-user me-1"></i> @c.RaisedBy &bull; @c.CreatedAt.ToString("MMM dd, hh:mm tt")</div>
+                                </div>
+                                <div>
+                                    @if(c.Status == "Open") { <span class="badge bg-danger">Open</span> }
+                                    else { <span class="badge bg-warning text-dark">In Progress</span> }
+                                </div>
+                            </li>
+                        }
+                    }
+                    else
+                    {
+                        <li class="list-group-item px-4 py-4 text-center text-muted">No pending complaints. Awesome!</li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        <!-- Recent Visitors -->
+        <div class="card border-0 shadow-sm rounded-4 h-50">
+            <div class="card-header bg-white border-bottom pt-4 pb-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-door-open text-info me-2"></i> Live Gate Feed (Visitors)</h5>
+                <a asp-controller="Visitor" asp-action="Index" class="text-decoration-none small fw-bold">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush rounded-bottom-4">
+                    @if (Model.RecentVisitors.Any())
+                    {
+                        foreach(var v in Model.RecentVisitors)
+                        {
+                            <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-3" style="width:40px; height:40px;">
+                                        <i class="fa-solid fa-user-tag text-secondary"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-dark">@v.VisitorName <span class="badge bg-light text-dark border ms-2">Flat @v.HostFlat</span></h6>
+                                        <div class="small text-muted mt-1">@v.Purpose &bull; @v.EntryTime.ToString("hh:mm tt")</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    @if(v.Status == "Approved") { <i class="fa-solid fa-circle-check text-success fs-5"></i> }
+                                    else { <i class="fa-solid fa-clock text-warning fs-5"></i> }
+                                </div>
+                            </li>
+                        }
+                    }
+                    else
+                    {
+                        <li class="list-group-item px-4 py-4 text-center text-muted">No recent visitors today.</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Recent Payments & Maintenance Status -->
+    <div class="col-lg-6">
+        <!-- Recent Payments -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4 h-100">
+            <div class="card-header bg-white border-bottom pt-4 pb-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-sack-dollar text-success me-2"></i> Recent Maintenance Payments</h5>
+                <a asp-controller="Maintenance" asp-action="Index" class="text-decoration-none small fw-bold">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="px-4 py-3 text-muted fw-semibold">Flat No.</th>
+                                <th class="py-3 text-muted fw-semibold">Bill Month</th>
+                                <th class="py-3 text-muted fw-semibold text-end">Amount</th>
+                                <th class="px-4 py-3 text-muted fw-semibold text-end">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if(Model.RecentPayments.Any())
+                            {
+                                foreach(var p in Model.RecentPayments)
+                                {
+                                    <tr>
+                                        <td class="px-4 py-3 fw-bold"><span class="badge bg-light text-dark border px-2 py-1">@p.FlatNumber</span></td>
+                                        <td class="py-3">@(new DateTime(p.BillYear, p.BillMonth, 1).ToString("MMM yyyy"))</td>
+                                        <td class="py-3 text-end fw-bold text-success">₹@p.AmountPaid.ToString("N0")</td>
+                                        <td class="px-4 py-3 text-end text-muted small">@p.PaymentDate.ToString("dd MMM, HH:mm")</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 text-muted">No recent payments received.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Quick Support Banner -->
+                <div class="m-4 p-4 rounded-4 bg-primary bg-opacity-10 text-center">
+                    <h6 class="fw-bold text-primary mb-2">Need System Support?</h6>
+                    <p class="small text-muted mb-3">Contact the SmartSociety technical team for assistance or to upgrade your plan.</p>
+                    <button class="btn btn-sm btn-primary rounded-pill px-4 fw-bold">Contact Support</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+    }
+</style>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Revenue Chart Data - Force 6 months padding
+            var rawLabels = @Html.Raw(Json.Serialize(Model.RevenueChart.Select(x => x.MonthName).Reverse()));
+            var rawData = @Html.Raw(Json.Serialize(Model.RevenueChart.Select(x => x.Revenue).Reverse()));
+
+            var fullMonthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            var shortMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            
+            var revenueLabels = [];
+            var revenueData = [];
+            
+            var currentDate = new Date();
+            for (let i = 5; i >= 0; i--) {
+                let tempDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+                let fullMonth = fullMonthNames[tempDate.getMonth()];
+                let shortMonth = shortMonthNames[tempDate.getMonth()];
+                
+                revenueLabels.push(shortMonth);
+                
+                // Find if we have data for this month
+                let dataIndex = rawLabels.indexOf(fullMonth);
+                if (dataIndex !== -1) {
+                    revenueData.push(rawData[dataIndex]);
+                } else {
+                    let shortIndex = rawLabels.indexOf(shortMonth);
+                    if (shortIndex !== -1) {
+                        revenueData.push(rawData[shortIndex]);
+                    } else {
+                        revenueData.push(0);
+                    }
+                }
+            }
+
+            var ctxRev = document.getElementById('revenueChart').getContext('2d');
+            
+            // Create gradient
+            var gradientRev = ctxRev.createLinearGradient(0, 0, 0, 300);
+            gradientRev.addColorStop(0, 'rgba(37, 99, 235, 0.4)');
+            gradientRev.addColorStop(1, 'rgba(37, 99, 235, 0.05)');
+
+            new Chart(ctxRev, {
+                type: 'line',
+                data: {
+                    labels: revenueLabels,
+                    datasets: [{
+                        label: 'Maintenance Collected (₹)',
+                        data: revenueData,
+                        borderColor: '#2563eb',
+                        backgroundColor: gradientRev,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#2563eb',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [2, 4], color: '#e2e8f0' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    },
+                    animation: {
+                        y: { duration: 2000, easing: 'easeOutQuart' }
+                    }
+                }
+            });
+
+            // Complaint Doughnut Chart
+            var compLabels = @Html.Raw(Json.Serialize(Model.ComplaintStats.Select(x => x.Status)));
+            var compData = @Html.Raw(Json.Serialize(Model.ComplaintStats.Select(x => x.Count)));
+
+            if(compLabels.length === 0) {
+                compLabels = ['Open', 'In Progress', 'Resolved'];
+                compData = [1, 1, 1];
+            }
+
+            // Map colors based on status
+            var compColors = compLabels.map(status => {
+                if(status === 'Open') return '#ef4444'; // red
+                if(status === 'InProgress') return '#f59e0b'; // warning
+                if(status === 'Resolved') return '#10b981'; // success
+                return '#64748b'; // secondary
+            });
+
+            var ctxComp = document.getElementById('complaintChart').getContext('2d');
+            new Chart(ctxComp, {
+                type: 'doughnut',
+                data: {
+                    labels: compLabels,
+                    datasets: [{
+                        data: compData,
+                        backgroundColor: compColors,
+                        borderWidth: 0,
+                        hoverOffset: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, padding: 20 }
+                        }
+                    },
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true,
+                        duration: 1500
+                    }
+                }
+            });
+        });
+    </script>
+}

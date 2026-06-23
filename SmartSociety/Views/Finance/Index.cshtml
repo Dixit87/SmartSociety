@@ -1,0 +1,758 @@
+@model dynamic
+
+@{
+    ViewData["Title"] = "Financial Accounts & Expenses";
+    var stats = Model.Stats as SmartSociety.Models.FinanceDashboardStats;
+    var expenses = Model.Expenses as IEnumerable<SmartSociety.Models.Expense>;
+    var incomes = Model.Incomes as IEnumerable<SmartSociety.Models.OtherIncome>;
+    var categories = Model.Categories as IEnumerable<SmartSociety.Models.ExpenseCategory>;
+    var chartData = Model.ChartData as IEnumerable<SmartSociety.Models.ChartDataPoint>;
+}
+
+<!-- DataTables Buttons CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" />
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-sack-dollar me-2 text-success"></i> Financial Accounts</h2>
+        <p class="text-muted mb-0">Track society income, expenses, and current bank balance.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <select id="filterMonth" class="form-select border-0 shadow-sm bg-white fw-semibold" style="width: 140px;" onchange="applyFilters()">
+            <option value="">All Months</option>
+            @for(int i=1; i<=12; i++) {
+                if(ViewBag.CurrentMonth == i) { <option value="@i" selected>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option> }
+                else { <option value="@i">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option> }
+            }
+        </select>
+        <select id="filterYear" class="form-select border-0 shadow-sm bg-white fw-semibold" style="width: 120px;" onchange="applyFilters()">
+            <option value="">All Years</option>
+            @for(int i = DateTime.Now.Year; i >= DateTime.Now.Year - 2; i--) {
+                if(ViewBag.CurrentYear == i) { <option value="@i" selected>@i</option> }
+                else { <option value="@i">@i</option> }
+            }
+        </select>
+    </div>
+</div>
+
+<!-- Dashboard Stats -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card bg-success bg-gradient text-white border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4 position-relative overflow-hidden">
+                <i class="fa-solid fa-arrow-trend-up position-absolute opacity-25" style="font-size: 8rem; top: -10px; right: -20px;"></i>
+                <h6 class="fw-semibold mb-3 opacity-75">Total Income</h6>
+                <h2 class="fw-bold mb-2">₹@stats.TotalIncome.ToString("N2")</h2>
+                <div class="small fw-semibold mt-3 pt-3 border-top border-light border-opacity-25">
+                    <span class="me-3" title="Maintenance"><i class="fa-solid fa-building me-1"></i> ₹@stats.TotalMaintenanceIncome.ToString("N0")</span>
+                    <span class="me-3" title="Utility"><i class="fa-solid fa-bolt me-1"></i> ₹@stats.TotalUtilityIncome.ToString("N0")</span>
+                    <span title="Other Incomes"><i class="fa-solid fa-plus-circle me-1"></i> ₹@stats.TotalOtherIncome.ToString("N0")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-danger bg-gradient text-white border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4 position-relative overflow-hidden">
+                <i class="fa-solid fa-arrow-trend-down position-absolute opacity-25" style="font-size: 8rem; top: -10px; right: -20px;"></i>
+                <h6 class="fw-semibold mb-3 opacity-75">Total Expenses</h6>
+                <h2 class="fw-bold mb-2">₹@stats.TotalExpense.ToString("N2")</h2>
+                <div class="small fw-semibold mt-3 pt-3 border-top border-light border-opacity-25 d-flex justify-content-between align-items-center">
+                    <span>Manage society outgoings efficiently</span>
+                    <button class="btn btn-sm btn-light text-danger rounded-pill fw-bold" onclick="openExpenseModal()">
+                        <i class="fa-solid fa-plus me-1"></i> Expense
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        @{
+            string balanceBg = stats.NetBalance >= 0 ? "bg-primary" : "bg-warning text-dark";
+            string balanceIcon = stats.NetBalance >= 0 ? "fa-wallet" : "fa-triangle-exclamation";
+        }
+        <div class="card @balanceBg bg-gradient text-white border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4 position-relative overflow-hidden">
+                <i class="fa-solid @balanceIcon position-absolute opacity-25" style="font-size: 8rem; top: -10px; right: -20px;"></i>
+                <h6 class="fw-semibold mb-3 opacity-75">Net Society Balance</h6>
+                <h2 class="fw-bold mb-2">₹@stats.NetBalance.ToString("N2")</h2>
+                <div class="small fw-semibold mt-3 pt-3 border-top border-light border-opacity-25 d-flex justify-content-between align-items-center">
+                    <span>Surplus/Deficit for selected period</span>
+                    <button class="btn btn-sm btn-light text-primary rounded-pill fw-bold" onclick="openIncomeModal()">
+                        <i class="fa-solid fa-plus me-1"></i> Income
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <!-- Chart Section -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <h6 class="fw-bold text-dark mb-0"><i class="fa-solid fa-chart-pie me-2 text-primary"></i> Expenses by Category</h6>
+            </div>
+            <div class="card-body p-4 d-flex align-items-center justify-content-center">
+                @if (chartData != null && chartData.Any())
+                {
+                    <canvas id="expenseChart" style="max-height: 280px;"></canvas>
+                }
+                else
+                {
+                    <div class="text-center text-muted">
+                        <i class="fa-solid fa-chart-simple fs-1 mb-3 opacity-50"></i>
+                        <p class="mb-0 fw-semibold">No expenses recorded for this period.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Ledger Section -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-bottom pt-3 pb-0 px-4">
+                <ul class="nav nav-tabs border-bottom-0" id="ledgerTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold text-danger border-0" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expenses" type="button" role="tab" aria-selected="true">
+                            <i class="fa-solid fa-arrow-trend-down me-1"></i> Expenses Ledger
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold text-success border-0" id="incomes-tab" data-bs-toggle="tab" data-bs-target="#incomes" type="button" role="tab" aria-selected="false">
+                            <i class="fa-solid fa-arrow-trend-up me-1"></i> Other Incomes Ledger
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body p-4">
+                <div class="tab-content" id="ledgerTabsContent">
+                    <!-- Expenses Tab -->
+                    <div class="tab-pane fade show active" id="expenses" role="tabpanel">
+                        <table class="table table-hover align-middle border-bottom w-100" id="expensesTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-semibold text-muted py-3">Date</th>
+                                    <th class="fw-semibold text-muted py-3">Details</th>
+                                    <th class="fw-semibold text-muted py-3">Paid To</th>
+                                    <th class="fw-semibold text-muted py-3 text-end">Amount</th>
+                                    <th class="fw-semibold text-muted py-3 text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if(expenses != null)
+                                {
+                                    foreach (var e in expenses)
+                                    {
+                                        <tr>
+                                            <td class="py-3">
+                                                <div class="fw-bold text-dark mb-1">@e.DateIncurred.ToString("dd MMM yyyy")</div>
+                                                <div class="small text-muted">@e.PaymentMethod</div>
+                                            </td>
+                                            <td class="py-3" style="max-width: 200px;">
+                                                <div class="fw-bold text-dark text-truncate mb-1" title="@e.Title">@e.Title</div>
+                                                <span class="badge bg-light text-secondary border border-secondary-subtle">@e.CategoryName</span>
+                                            </td>
+                                            <td class="py-3">
+                                                <div class="fw-semibold text-dark">@e.PaidTo</div>
+                                                @if(!string.IsNullOrEmpty(e.ReferenceNo))
+                                                {
+                                                    <div class="small text-muted">Ref: @e.ReferenceNo</div>
+                                                }
+                                            </td>
+                                            <td class="py-3 text-end">
+                                                <h6 class="fw-bold text-danger mb-0">-₹@e.Amount.ToString("N2")</h6>
+                                            </td>
+                                            <td class="py-3 text-end">
+                                                <div class="d-flex justify-content-end gap-2">
+                                                    @if (!string.IsNullOrEmpty(e.ReceiptUrl))
+                                                    {
+                                                        <button class="btn btn-sm btn-light border text-primary shadow-sm" onclick="viewReceipt('@e.ReceiptUrl')" title="View Receipt">
+                                                            <i class="fa-solid fa-file-invoice"></i>
+                                                        </button>
+                                                    }
+                                                    <button class="btn btn-sm btn-light border text-dark shadow-sm" onclick="openEditExpenseModal(@e.ExpenseId, @e.CategoryId, '@Uri.EscapeDataString(e.Title)', @e.Amount, '@e.DateIncurred.ToString("yyyy-MM-dd")', '@Uri.EscapeDataString(e.PaidTo)', '@e.PaymentMethod', '@Uri.EscapeDataString(e.ReferenceNo ?? "")', '@Uri.EscapeDataString(e.Notes ?? "")')" title="Edit">
+                                                        <i class="fa-solid fa-pen"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-light border text-danger shadow-sm" onclick="deleteExpense(@e.ExpenseId)" title="Delete">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Incomes Tab -->
+                    <div class="tab-pane fade" id="incomes" role="tabpanel">
+                        <table class="table table-hover align-middle border-bottom w-100" id="incomesTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-semibold text-muted py-3">Date</th>
+                                    <th class="fw-semibold text-muted py-3">Details</th>
+                                    <th class="fw-semibold text-muted py-3">Received From</th>
+                                    <th class="fw-semibold text-muted py-3 text-end">Amount</th>
+                                    <th class="fw-semibold text-muted py-3 text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if(incomes != null)
+                                {
+                                    foreach (var inc in incomes)
+                                    {
+                                        <tr>
+                                            <td class="py-3">
+                                                <div class="fw-bold text-dark mb-1">@inc.DateReceived.ToString("dd MMM yyyy")</div>
+                                                <div class="small text-muted">@inc.PaymentMethod</div>
+                                            </td>
+                                            <td class="py-3" style="max-width: 200px;">
+                                                <div class="fw-bold text-dark text-truncate mb-1" title="@inc.Title">@inc.Title</div>
+                                                <span class="badge bg-light text-secondary border border-secondary-subtle">@inc.Source</span>
+                                            </td>
+                                            <td class="py-3">
+                                                <div class="fw-semibold text-dark">@inc.ReceivedFrom</div>
+                                                @if(!string.IsNullOrEmpty(inc.ReferenceNo))
+                                                {
+                                                    <div class="small text-muted">Ref: @inc.ReferenceNo</div>
+                                                }
+                                            </td>
+                                            <td class="py-3 text-end">
+                                                <h6 class="fw-bold text-success mb-0">+₹@inc.Amount.ToString("N2")</h6>
+                                            </td>
+                                            <td class="py-3 text-end">
+                                                <div class="d-flex justify-content-end gap-2">
+                                                    @if (!string.IsNullOrEmpty(inc.ReceiptUrl))
+                                                    {
+                                                        <button class="btn btn-sm btn-light border text-primary shadow-sm" onclick="viewReceipt('@inc.ReceiptUrl')" title="View Receipt">
+                                                            <i class="fa-solid fa-file-invoice"></i>
+                                                        </button>
+                                                    }
+                                                    <button class="btn btn-sm btn-light border text-dark shadow-sm" onclick="openEditIncomeModal(@inc.IncomeId, '@Uri.EscapeDataString(inc.Source)', '@Uri.EscapeDataString(inc.Title)', @inc.Amount, '@inc.DateReceived.ToString("yyyy-MM-dd")', '@Uri.EscapeDataString(inc.ReceivedFrom)', '@inc.PaymentMethod', '@Uri.EscapeDataString(inc.ReferenceNo ?? "")', '@Uri.EscapeDataString(inc.Notes ?? "")')" title="Edit">
+                                                        <i class="fa-solid fa-pen"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-light border text-danger shadow-sm" onclick="deleteIncome(@inc.IncomeId)" title="Delete">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<!-- Add/Edit Expense Modal -->
+<div class="modal fade" id="expenseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-danger text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold" id="expenseModalTitle"><i class="fa-solid fa-file-invoice-dollar me-2"></i> Record Expense</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="expenseForm" onsubmit="event.preventDefault(); submitExpense();">
+                    <input type="hidden" id="expId" name="expenseId" value="0" />
+                    <input type="hidden" id="expActionUrl" value="/Finance/AddExpense" />
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Expense Category <span class="text-danger">*</span></label>
+                            <select id="expCategory" name="categoryId" class="form-select bg-light border-0 py-2" required>
+                                <option value="">-- Select Category --</option>
+                                @foreach(var cat in categories)
+                                {
+                                    <option value="@cat.CategoryId">@cat.CategoryName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Title / Description <span class="text-danger">*</span></label>
+                            <input type="text" id="expTitle" name="title" class="form-control bg-light border-0 py-2" required placeholder="E.g., June Electricity Bill" maxlength="150" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted mb-1">Amount (₹) <span class="text-danger">*</span></label>
+                            <input type="number" id="expAmount" name="amount" class="form-control bg-light border-0 py-2" required min="1" step="0.01" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted mb-1">Date Incurred <span class="text-danger">*</span></label>
+                            <input type="date" id="expDate" name="dateIncurred" class="form-control bg-light border-0 py-2" required value="@DateTime.Now.ToString("yyyy-MM-dd")" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted mb-1">Paid To (Vendor) <span class="text-danger">*</span></label>
+                            <input type="text" id="expPaidTo" name="paidTo" class="form-control bg-light border-0 py-2" required placeholder="E.g., PGVCL" maxlength="100" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Payment Method <span class="text-danger">*</span></label>
+                            <select id="expMethod" name="paymentMethod" class="form-select bg-light border-0 py-2" required>
+                                <option value="Bank Transfer">Bank Transfer (NEFT/RTGS)</option>
+                                <option value="UPI">UPI</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Credit Card">Credit Card</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Reference No. (Txn ID)</label>
+                            <input type="text" id="expRef" name="referenceNo" class="form-control bg-light border-0 py-2" placeholder="Optional" maxlength="100" />
+                        </div>
+                        <div class="col-12" id="expReceiptDiv">
+                            <label class="form-label fw-semibold small text-muted mb-1">Attach Receipt / Invoice (Optional)</label>
+                            <input type="file" id="expReceipt" name="receipt" class="form-control bg-light border-0 py-2" accept="image/*,.pdf" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Internal Notes</label>
+                            <textarea id="expNotes" name="notes" class="form-control bg-light border-0" rows="2" placeholder="Any additional details..."></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill fw-semibold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger px-4 rounded-pill shadow-sm fw-bold" id="btnSubmitExpense">
+                            <i class="fa-solid fa-check me-2"></i> Save Expense
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Other Income Modal -->
+<div class="modal fade" id="incomeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-success text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold" id="incomeModalTitle"><i class="fa-solid fa-hand-holding-dollar me-2"></i> Record Other Income</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="incomeForm" onsubmit="event.preventDefault(); submitIncome();">
+                    <input type="hidden" id="incId" name="incomeId" value="0" />
+                    <input type="hidden" id="incActionUrl" value="/Finance/AddOtherIncome" />
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Income Source <span class="text-danger">*</span></label>
+                            <select id="incSource" name="source" class="form-select bg-light border-0 py-2" required>
+                                <option value="">-- Select Source --</option>
+                                <option value="Move-in Charge">Move-in / Move-out Charge</option>
+                                <option value="Clubhouse Booking">Clubhouse / Amenity Booking</option>
+                                <option value="Late Penalty">Late Penalty / Fine</option>
+                                <option value="Event Sponsorship">Event Sponsorship</option>
+                                <option value="Donation">Donation</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Title / Description <span class="text-danger">*</span></label>
+                            <input type="text" id="incTitle" name="title" class="form-control bg-light border-0 py-2" required placeholder="E.g., Diwali Event Sponsorship" maxlength="150" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted mb-1">Amount (₹) <span class="text-danger">*</span></label>
+                            <input type="number" id="incAmount" name="amount" class="form-control bg-light border-0 py-2" required min="1" step="0.01" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted mb-1">Date Received <span class="text-danger">*</span></label>
+                            <input type="date" id="incDate" name="dateReceived" class="form-control bg-light border-0 py-2" required value="@DateTime.Now.ToString("yyyy-MM-dd")" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted mb-1">Received From <span class="text-danger">*</span></label>
+                            <input type="text" id="incReceivedFrom" name="receivedFrom" class="form-control bg-light border-0 py-2" required placeholder="E.g., Mr. Sharma (A-101)" maxlength="100" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Payment Method <span class="text-danger">*</span></label>
+                            <select id="incMethod" name="paymentMethod" class="form-select bg-light border-0 py-2" required>
+                                <option value="Bank Transfer">Bank Transfer (NEFT/RTGS)</option>
+                                <option value="UPI">UPI</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Cash">Cash</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Reference No. (Txn ID)</label>
+                            <input type="text" id="incRef" name="referenceNo" class="form-control bg-light border-0 py-2" placeholder="Optional" maxlength="100" />
+                        </div>
+                        <div class="col-12" id="incReceiptDiv">
+                            <label class="form-label fw-semibold small text-muted mb-1">Attach Receipt (Optional)</label>
+                            <input type="file" id="incReceipt" name="receipt" class="form-control bg-light border-0 py-2" accept="image/*,.pdf" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Internal Notes</label>
+                            <textarea id="incNotes" name="notes" class="form-control bg-light border-0" rows="2" placeholder="Any additional details..."></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill fw-semibold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success px-4 rounded-pill shadow-sm fw-bold" id="btnSubmitIncome">
+                            <i class="fa-solid fa-check me-2"></i> Save Income
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Receipt Viewer Modal -->
+<div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-dark text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-file-invoice me-2"></i> Document Viewer</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 bg-light text-center" style="min-height: 400px; display: flex; align-items: center; justify-content: center;">
+                <div id="receiptViewerContainer" class="w-100 p-2">
+                    <!-- Image or PDF will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <!-- DataTables Export Buttons JS -->
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        var expenseModal, incomeModal, receiptModal;
+
+        $(document).ready(function () {
+            // Initialize Expense Table with Export Buttons
+            $('#expensesTable').DataTable({
+                "pageLength": 10,
+                "ordering": false,
+                "responsive": true,
+                "dom": '<"row align-items-center mb-3"<"col-md-6"B><"col-md-6"f>>rt<"row align-items-center mt-3"<"col-md-6"i><"col-md-6"p>>',
+                "buttons": {
+                    dom: {
+                        button: {
+                            className: 'btn btn-sm shadow-sm fw-bold'
+                        }
+                    },
+                    buttons: [
+                        { extend: 'excelHtml5', className: 'btn-success text-white me-2', text: '<i class="fa-solid fa-file-excel me-1"></i> Excel', exportOptions: { columns: [0, 1, 2, 3] } },
+                        { extend: 'pdfHtml5', className: 'btn-danger text-white', text: '<i class="fa-solid fa-file-pdf me-1"></i> PDF', exportOptions: { columns: [0, 1, 2, 3] } }
+                    ]
+                },
+                "language": {
+                    "search": "",
+                    "searchPlaceholder": "Search expenses..."
+                }
+            });
+
+            // Initialize Income Table with Export Buttons
+            $('#incomesTable').DataTable({
+                "pageLength": 10,
+                "ordering": false,
+                "responsive": true,
+                "dom": '<"row align-items-center mb-3"<"col-md-6"B><"col-md-6"f>>rt<"row align-items-center mt-3"<"col-md-6"i><"col-md-6"p>>',
+                "buttons": {
+                    dom: {
+                        button: {
+                            className: 'btn btn-sm shadow-sm fw-bold'
+                        }
+                    },
+                    buttons: [
+                        { extend: 'excelHtml5', className: 'btn-success text-white me-2', text: '<i class="fa-solid fa-file-excel me-1"></i> Excel', exportOptions: { columns: [0, 1, 2, 3] } },
+                        { extend: 'pdfHtml5', className: 'btn-danger text-white', text: '<i class="fa-solid fa-file-pdf me-1"></i> PDF', exportOptions: { columns: [0, 1, 2, 3] } }
+                    ]
+                },
+                "language": {
+                    "search": "",
+                    "searchPlaceholder": "Search incomes..."
+                }
+            });
+            
+            expenseModal = new bootstrap.Modal(document.getElementById('expenseModal'));
+            incomeModal = new bootstrap.Modal(document.getElementById('incomeModal'));
+            receiptModal = new bootstrap.Modal(document.getElementById('receiptModal'));
+
+            // Set active tab to outline button styling for standard DataTables inputs
+            $('.dataTables_filter input').addClass('form-control form-control-sm');
+
+            // Initialize Chart
+            @if (chartData != null && chartData.Any())
+            {
+                <text>
+                var ctx = document.getElementById('expenseChart').getContext('2d');
+                var labels = [];
+                var data = [];
+                var bgColors = [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                    'rgba(255, 159, 64, 0.8)',
+                    'rgba(199, 199, 199, 0.8)',
+                    'rgba(83, 102, 255, 0.8)',
+                    'rgba(255, 99, 255, 0.8)',
+                    'rgba(54, 235, 162, 0.8)'
+                ];
+
+                @foreach(var item in chartData)
+                {
+                    @:labels.push('@item.CategoryName');
+                    @:data.push(@item.TotalAmount);
+                }
+
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: bgColors,
+                            borderWidth: 0,
+                            hoverOffset: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { boxWidth: 12, padding: 15, font: { family: "'Inter', sans-serif", size: 12 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) { label += ': '; }
+                                        if (context.parsed !== null) {
+                                            label += '₹' + context.parsed.toLocaleString('en-IN');
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '65%'
+                    }
+                });
+                </text>
+            }
+        });
+
+        function applyFilters() {
+            var month = $('#filterMonth').val();
+            var year = $('#filterYear').val();
+            var url = '/Finance?';
+            if (month) url += 'month=' + month + '&';
+            if (year) url += 'year=' + year + '&';
+            window.location.href = url;
+        }
+
+        /* EXPENSE LOGIC */
+        function openExpenseModal() {
+            $('#expenseForm')[0].reset();
+            $('#expId').val('0');
+            $('#expActionUrl').val('/Finance/AddExpense');
+            $('#expDate').val(new Date().toISOString().split('T')[0]);
+            $('#expenseModalTitle').html('<i class="fa-solid fa-file-invoice-dollar me-2"></i> Record New Expense');
+            $('#expReceiptDiv').show(); // Show file upload for Add
+            expenseModal.show();
+        }
+
+        function openEditExpenseModal(id, catId, title, amount, date, paidTo, method, ref, notes) {
+            $('#expenseForm')[0].reset();
+            $('#expId').val(id);
+            $('#expActionUrl').val('/Finance/EditExpense');
+            $('#expenseModalTitle').html('<i class="fa-solid fa-pen me-2"></i> Edit Expense');
+            
+            $('#expCategory').val(catId);
+            $('#expTitle').val(decodeURIComponent(title));
+            $('#expAmount').val(amount);
+            $('#expDate').val(date);
+            $('#expPaidTo').val(decodeURIComponent(paidTo));
+            $('#expMethod').val(method);
+            $('#expRef').val(decodeURIComponent(ref));
+            $('#expNotes').val(decodeURIComponent(notes));
+            
+            $('#expReceiptDiv').hide(); // Hide file upload for Edit (complex to handle in simple form)
+            expenseModal.show();
+        }
+
+        function submitExpense() {
+            var form = $('#expenseForm')[0];
+            var formData = new FormData(form);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+            var url = $('#expActionUrl').val();
+
+            $('#btnSubmitExpense').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmitExpense').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Save Expense');
+                    }
+                }
+            });
+        }
+
+        function deleteExpense(id) {
+            Swal.fire({
+                title: 'Delete Expense?',
+                text: "This will permanently remove the expense.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Finance/DeleteExpense',
+                        type: 'POST',
+                        data: { expenseId: id, __RequestVerificationToken: token },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        /* OTHER INCOME LOGIC */
+        function openIncomeModal() {
+            $('#incomeForm')[0].reset();
+            $('#incId').val('0');
+            $('#incActionUrl').val('/Finance/AddOtherIncome');
+            $('#incDate').val(new Date().toISOString().split('T')[0]);
+            $('#incomeModalTitle').html('<i class="fa-solid fa-hand-holding-dollar me-2"></i> Record Other Income');
+            $('#incReceiptDiv').show();
+            incomeModal.show();
+        }
+
+        function openEditIncomeModal(id, source, title, amount, date, rcvdFrom, method, ref, notes) {
+            $('#incomeForm')[0].reset();
+            $('#incId').val(id);
+            $('#incActionUrl').val('/Finance/EditOtherIncome');
+            $('#incomeModalTitle').html('<i class="fa-solid fa-pen me-2"></i> Edit Income');
+            
+            $('#incSource').val(decodeURIComponent(source));
+            $('#incTitle').val(decodeURIComponent(title));
+            $('#incAmount').val(amount);
+            $('#incDate').val(date);
+            $('#incReceivedFrom').val(decodeURIComponent(rcvdFrom));
+            $('#incMethod').val(method);
+            $('#incRef').val(decodeURIComponent(ref));
+            $('#incNotes').val(decodeURIComponent(notes));
+            
+            $('#incReceiptDiv').hide();
+            incomeModal.show();
+        }
+
+        function submitIncome() {
+            var form = $('#incomeForm')[0];
+            var formData = new FormData(form);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+            var url = $('#incActionUrl').val();
+
+            $('#btnSubmitIncome').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmitIncome').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Save Income');
+                    }
+                }
+            });
+        }
+
+        function deleteIncome(id) {
+            Swal.fire({
+                title: 'Delete Income?',
+                text: "This will permanently remove the income record.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Finance/DeleteOtherIncome',
+                        type: 'POST',
+                        data: { incomeId: id, __RequestVerificationToken: token },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function viewReceipt(url) {
+            if(!url) return;
+            var extension = url.split('.').pop().toLowerCase();
+            var container = $('#receiptViewerContainer');
+            
+            if(extension === 'pdf') {
+                container.html('<iframe src="' + url + '" width="100%" height="600px" style="border: none;"></iframe>');
+            } else {
+                container.html('<img src="' + url + '" class="img-fluid rounded shadow-sm" style="max-height: 80vh;" />');
+            }
+            receiptModal.show();
+        }
+    </script>
+}

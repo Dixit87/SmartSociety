@@ -1,0 +1,302 @@
+@model SmartSociety.Models.DashboardAnalyticsViewModel
+
+@{
+    ViewData["Title"] = "Reports & Analytics";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+        <li class="breadcrumb-item text-muted">Admin</li>
+        <li class="breadcrumb-item active fw-bold" aria-current="page">Reports & Analytics</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-chart-line text-primary me-2"></i> Analytics Dashboard</h2>
+        <p class="text-muted mb-0">High-level financial and operational overview of the society.</p>
+    </div>
+    <div class="btn-group shadow-sm">
+        <button class="btn btn-light fw-bold text-success border" onclick="downloadReport('financial')">
+            <i class="fa-solid fa-file-excel me-2"></i> Financial Audit
+        </button>
+        <button class="btn btn-light fw-bold text-danger border" onclick="downloadReport('complaints')">
+            <i class="fa-solid fa-file-pdf me-2"></i> Complaint Report
+        </button>
+    </div>
+</div>
+
+<!-- 1. KPI Row -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-success bg-opacity-10">
+            <div class="card-body p-4 d-flex align-items-center">
+                <div class="bg-success text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 60px; height: 60px; font-size: 24px;">
+                    <i class="fa-solid fa-indian-rupee-sign"></i>
+                </div>
+                <div>
+                    <h6 class="text-success mb-1 fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 12px;">Total Collected</h6>
+                    <h3 class="mb-0 fw-bold text-dark">₹ @Model.Metrics.TotalCollected.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-danger bg-opacity-10">
+            <div class="card-body p-4 d-flex align-items-center">
+                <div class="bg-danger text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 60px; height: 60px; font-size: 24px;">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                </div>
+                <div>
+                    <h6 class="text-danger mb-1 fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 12px;">Outstanding Dues</h6>
+                    <h3 class="mb-0 fw-bold text-dark">₹ @Model.Metrics.TotalPending.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-warning bg-opacity-10">
+            <div class="card-body p-4 d-flex align-items-center">
+                <div class="bg-warning text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 60px; height: 60px; font-size: 24px;">
+                    <i class="fa-solid fa-headset"></i>
+                </div>
+                <div>
+                    <h6 class="text-warning-emphasis mb-1 fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 12px;">Open Complaints</h6>
+                    <h3 class="mb-0 fw-bold text-dark">@Model.Metrics.OpenComplaints</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-info bg-opacity-10">
+            <div class="card-body p-4 d-flex align-items-center">
+                <div class="bg-info text-white rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 60px; height: 60px; font-size: 24px;">
+                    <i class="fa-regular fa-calendar-check"></i>
+                </div>
+                <div>
+                    <h6 class="text-info-emphasis mb-1 fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 12px;">Total Bookings</h6>
+                    <h3 class="mb-0 fw-bold text-dark">@Model.Metrics.TotalBookings</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Charts Row -->
+<div class="row g-4 mb-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-money-bill-trend-up text-success me-2"></i> Maintenance Collection Status</h5>
+            </div>
+            <div class="card-body p-4">
+                <canvas id="financeChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-chart-pie text-primary me-2"></i> Complaint Analysis</h5>
+            </div>
+            <div class="card-body p-4 d-flex justify-content-center align-items-center">
+                <canvas id="complaintChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Tables Row -->
+<div class="row g-4">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-bottom pt-4 pb-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-circle-exclamation text-danger me-2"></i> Top 5 Defaulters (Overdue)</h5>
+                <span class="badge bg-danger-subtle text-danger rounded-pill px-3 py-2">Urgent Action Required</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="px-4 py-3 text-muted fw-semibold">Resident Name</th>
+                                <th class="py-3 text-muted fw-semibold">Flat No.</th>
+                                <th class="py-3 text-muted fw-semibold">Due Date</th>
+                                <th class="px-4 py-3 text-muted fw-semibold text-end">Pending Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.TopDefaulters.Any())
+                            {
+                                foreach (var d in Model.TopDefaulters)
+                                {
+                                    <tr>
+                                        <td class="px-4 py-3 fw-bold text-dark">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-flex justify-content-center align-items-center me-3 fw-bold" style="width: 35px; height: 35px;">
+                                                    @d.ResidentName.Substring(0, 1).ToUpper()
+                                                </div>
+                                                @d.ResidentName
+                                            </div>
+                                        </td>
+                                        <td class="py-3"><span class="badge bg-light text-dark border px-3 py-2 rounded-pill">@d.FlatNumber</span></td>
+                                        <td class="py-3 text-danger fw-semibold">
+                                            <i class="fa-regular fa-clock me-1"></i> @d.DueDate.ToString("dd MMM yyyy")
+                                        </td>
+                                        <td class="px-4 py-3 text-end">
+                                            <h5 class="mb-0 fw-bold text-danger">₹ @d.DueAmount.ToString("N2")</h5>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 text-muted">
+                                        <i class="fa-solid fa-face-smile text-success fs-1 mb-3 d-block"></i>
+                                        <h5 class="fw-bold">No Overdue Defaulters!</h5>
+                                        <p class="mb-0">All maintenance dues are cleared.</p>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Chart.js Integration -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        $(document).ready(function () {
+            loadChartData();
+        });
+
+        function loadChartData() {
+            $.ajax({
+                url: '/Report/GetChartData',
+                type: 'GET',
+                success: function (res) {
+                    if (res.success) {
+                        initFinanceChart(res.data.billStatuses);
+                        initComplaintChart(res.data.complaintCategories);
+                    }
+                }
+            });
+        }
+
+        function initFinanceChart(billData) {
+            var ctx = document.getElementById('financeChart').getContext('2d');
+            
+            var labels = [];
+            var data = [];
+            var colors = [];
+
+            billData.forEach(function(item) {
+                labels.push(item.status);
+                data.push(item.totalAmount);
+                if(item.status === 'Paid') colors.push('rgba(25, 135, 84, 0.8)'); // Success green
+                else if(item.status === 'Partial') colors.push('rgba(255, 193, 7, 0.8)'); // Warning yellow
+                else colors.push('rgba(220, 53, 69, 0.8)'); // Danger red
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Amount (₹)',
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 0,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [2, 4], color: '#e9ecef' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initComplaintChart(compData) {
+            var ctx = document.getElementById('complaintChart').getContext('2d');
+            
+            var labels = [];
+            var data = [];
+            var bgColors = ['#0d6efd', '#6610f2', '#d63384', '#fd7e14', '#20c997', '#0dcaf0'];
+
+            compData.forEach(function(item) {
+                labels.push(item.category);
+                data.push(item.count);
+            });
+
+            if(data.length === 0) {
+                // Dummy data if empty
+                labels = ['No Complaints'];
+                data = [1];
+                bgColors = ['#e9ecef'];
+            }
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: bgColors,
+                        borderWidth: 2,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, padding: 20 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function downloadReport(type) {
+            Swal.fire({
+                title: 'Generating Report...',
+                html: 'Please wait while we compile the ' + type + ' data.',
+                timer: 2000,
+                timerProgressBar: true,
+                didOpen: () => {
+                    Swal.showLoading()
+                }
+            }).then((result) => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Report Downloaded!',
+                    text: 'The mock report has been successfully generated.',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+            });
+        }
+    </script>
+}

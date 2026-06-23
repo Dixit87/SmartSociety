@@ -1,15 +1,23 @@
 @model dynamic
 
 @{
-    ViewData["Title"] = "Complaint Helpdesk";
-    var stats = Model.Stats as SmartSociety.Models.ComplaintDashboardStats;
-    var complaints = Model.Complaints as IEnumerable<SmartSociety.Models.Complaint>;
-    var flats = Model.Flats as IEnumerable<SmartSociety.Models.Flat>;
-    var residents = Model.Residents as IEnumerable<SmartSociety.Models.User>;
-    var technicians = Model.Technicians as IEnumerable<SmartSociety.Models.User>;
+ViewData["Title"] = "Complaint Helpdesk";
+var stats = Model.Stats as SmartSociety.Models.ComplaintDashboardStats;
+var complaints = Model.Complaints as IEnumerable<SmartSociety.Models.Complaint>;
+var flats = Model.Flats as IEnumerable<SmartSociety.Models.Flat>;
+var residents = Model.Residents as IEnumerable<SmartSociety.Models.User>;
+var technicians = Model.Technicians as IEnumerable<SmartSociety.Models.User>;
 }
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2">
+        <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+        <li class="breadcrumb-item text-muted">Admin</li>
+        <li class="breadcrumb-item active fw-bold" aria-current="page">Complaint Helpdesk</li>
+    </ol>
+</nav>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -88,18 +96,20 @@
                 <a href="#" onclick="applyFilters('InProgress')" class="btn @(ViewBag.CurrentStatus == "InProgress" ? "btn-dark shadow-sm" : "btn-light") rounded-pill px-4 fw-semibold">In Progress</a>
                 <a href="#" onclick="applyFilters('Resolved')" class="btn @(ViewBag.CurrentStatus == "Resolved" ? "btn-dark shadow-sm" : "btn-light") rounded-pill px-4 fw-semibold">Resolved</a>
             </div>
-            
+
             <div class="d-flex gap-2 align-items-center">
                 <select id="filterMonth" class="form-select border-0 shadow-sm bg-light" style="width: 140px;">
                     <option value="">All Months</option>
-                    @for(int i=1; i<=12; i++) {
+                    @for (int i=1; i<=12; i++)
+                    {
                         if(ViewBag.CurrentMonth == i) { <option value="@i" selected>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option> }
                         else { <option value="@i">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option> }
                     }
                 </select>
                 <select id="filterYear" class="form-select border-0 shadow-sm bg-light" style="width: 120px;">
                     <option value="">All Years</option>
-                    @for(int i = DateTime.Now.Year; i >= DateTime.Now.Year - 2; i--) {
+                    @for (int i = DateTime.Now.Year; i >= DateTime.Now.Year - 2; i--)
+                    {
                         if(ViewBag.CurrentYear == i) { <option value="@i" selected>@i</option> }
                         else { <option value="@i">@i</option> }
                     }
@@ -120,7 +130,7 @@
                 </tr>
             </thead>
             <tbody>
-                @if(complaints != null)
+                @if (complaints != null)
                 {
                     foreach (var c in complaints)
                     {
@@ -172,7 +182,7 @@
                                             </a>
                                         </li>
                                         <li><hr class="dropdown-divider"></li>
-                                        @if(c.Status != "Resolved" && c.Status != "Closed")
+                                        @if (c.Status != "Resolved" && c.Status != "Closed")
                                         {
                                             <li>
                                                 <a class="dropdown-item py-2 fw-semibold text-success" href="#" onclick="openAssignModal(@c.ComplaintId, @(c.AssignedTo ?? 0))">
@@ -221,7 +231,7 @@
                             <label class="form-label fw-semibold small text-muted mb-1">Resident <span class="text-danger">*</span></label>
                             <select id="raiseResident" name="raisedBy" class="form-select bg-light border-0 py-2" required>
                                 <option value="">-- Select Resident --</option>
-                                @foreach(var r in residents)
+                                @foreach (var r in residents)
                                 {
                                     <option value="@r.UserId">@r.FullName</option>
                                 }
@@ -231,7 +241,7 @@
                             <label class="form-label fw-semibold small text-muted mb-1">Flat <span class="text-danger">*</span></label>
                             <select id="raiseFlat" name="flatId" class="form-select bg-light border-0 py-2" required>
                                 <option value="">-- Select Flat --</option>
-                                @foreach(var f in flats)
+                                @foreach (var f in flats)
                                 {
                                     <option value="@f.FlatId">Block @f.BlockName - @f.FlatNumber</option>
                                 }
@@ -350,7 +360,7 @@
                         <label class="form-label fw-semibold small text-muted mb-1">Select Technician <span class="text-danger">*</span></label>
                         <select id="assignTech" name="assignedTo" class="form-select bg-light border-0 py-2" required>
                             <option value="">-- Choose Technician --</option>
-                            @foreach(var t in technicians)
+                            @foreach (var t in technicians)
                             {
                                 <option value="@t.UserId">@t.FullName (@t.Role)</option>
                             }
@@ -418,14 +428,14 @@
                     <span class="badge bg-secondary" id="viewCategory">Category</span>
                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="viewStatus">Status</span>
                 </div>
-                
+
                 <div class="row g-4">
                     <div class="col-md-7">
                         <h6 class="fw-bold text-muted small text-uppercase mb-2">Issue Description</h6>
                         <div class="p-3 bg-light rounded-3 mb-4">
                             <p class="mb-0 text-dark" id="viewDescription" style="white-space: pre-wrap; font-size: 0.95rem;">Description</p>
                         </div>
-                        
+
                         <h6 class="fw-bold text-muted small text-uppercase mb-2">Admin Remarks</h6>
                         <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 mb-0">
                             <p class="mb-0 text-dark fst-italic" id="viewRemarks" style="font-size: 0.95rem;">No remarks added yet.</p>
@@ -449,225 +459,239 @@
 @Html.AntiForgeryToken()
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    
-    <script>
-        var raiseModal, assignModal, statusModal, viewModal, editModal;
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
-        $(document).ready(function () {
-            $('#complaintsTable').DataTable({
-                "pageLength": 25,
-                "ordering": false,
-                "responsive": true,
-                "language": {
-                    "search": "_INPUT_",
-                    "searchPlaceholder": "Search tickets..."
-                }
-            });
-            
-            raiseModal = new bootstrap.Modal(document.getElementById('raiseModal'));
-            assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
-            statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
-            viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
-            editModal = new bootstrap.Modal(document.getElementById('editModal'));
-        });
+<script>
+    var raiseModal, assignModal, statusModal, viewModal, editModal;
 
-        function applyFilters(status) {
-            var url = '/Complaint?';
-            if (status) {
-                url += 'status=' + status + '&';
-            }
-            var month = $('#filterMonth').val();
-            var year = $('#filterYear').val();
-            if (month) url += 'month=' + month + '&';
-            if (year) url += 'year=' + year + '&';
-            
-            window.location.href = url;
-        }
+    $(document).ready(function () {
+    $('#complaintsTable').DataTable({
+    "pageLength": 25,
+    "ordering": false,
+    "responsive": true,
+    "language": {
+    "search": "_INPUT_",
+    "searchPlaceholder": "Search tickets..."
+}
+});
 
-        function openRaiseModal() {
-            $('#raiseForm')[0].reset();
-            raiseModal.show();
-        }
+raiseModal = new bootstrap.Modal(document.getElementById('raiseModal'));
+assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
+editModal = new bootstrap.Modal(document.getElementById('editModal'));
+});
 
-        function submitRaise() {
-            var form = $('#raiseForm')[0];
-            var formData = new FormData(form);
-            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+function applyFilters(status) {
+var url = '/Complaint?';
+if (status) {
+url += 'status=' + status + '&';
+}
+var month = $('#filterMonth').val();
+var year = $('#filterYear').val();
+if (month) url += 'month=' + month + '&';
+if (year) url += 'year=' + year + '&';
 
-            $('#btnSubmitRaise').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Submitting...');
+window.location.href = url;
+}
 
-            $.ajax({
-                url: '/Complaint/Create',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function (res) {
-                    if (res.success) {
-                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        Swal.fire('Error', res.message, 'error');
-                        $('#btnSubmitRaise').prop('disabled', false).html('<i class="fa-solid fa-paper-plane me-2"></i> Submit Complaint');
-                    }
-                }
-            });
-        }
+function openRaiseModal() {
+$('#raiseForm')[0].reset();
+raiseModal.show();
+}
 
-        function openEditModal(id, title, desc, cat, priority) {
-            $('#editForm')[0].reset();
-            $('#editComplaintId').val(id);
-            $('#editTitle').val(decodeURIComponent(title));
-            $('#editDescription').val(decodeURIComponent(desc));
-            $('#editCategory').val(cat);
-            $('#editPriority').val(priority);
-            editModal.show();
-        }
+function submitRaise() {
+var form = $('#raiseForm')[0];
+var formData = new FormData(form);
+formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
 
-        function submitEdit() {
-            var form = $('#editForm')[0];
-            var formData = new FormData(form);
-            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+$('#btnSubmitRaise').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Submitting...');
 
-            $('#btnSubmitEdit').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+$.ajax({
+url: '/Complaint/Create',
+type: 'POST',
+data: formData,
+processData: false,
+contentType: false,
+success: function (res) {
+if (res.success) {
+Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+setTimeout(() => location.reload(), 1500);
+}
+else
+{
+    Swal.fire('Error', res.message, 'error');
+    $('#btnSubmitRaise').prop('disabled', false).html('<i class="fa-solid fa-paper-plane me-2"></i> Submit Complaint');
+}
+}
+});
+}
 
-            $.ajax({
-                url: '/Complaint/Edit',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function (res) {
-                    if (res.success) {
-                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        Swal.fire('Error', res.message, 'error');
-                        $('#btnSubmitEdit').prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Changes');
-                    }
-                }
-            });
-        }
+function openEditModal(id, title, desc, cat, priority) {
+$('#editForm')[0].reset();
+$('#editComplaintId').val(id);
+$('#editTitle').val(decodeURIComponent(title));
+$('#editDescription').val(decodeURIComponent(desc));
+$('#editCategory').val(cat);
+$('#editPriority').val(priority);
+editModal.show();
+}
 
-        function deleteComplaint(id) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this! The attached photo will also be deleted.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    var token = $('input[name="__RequestVerificationToken"]').val();
-                    $.ajax({
-                        url: '/Complaint/Delete',
-                        type: 'POST',
-                        data: { complaintId: id, __RequestVerificationToken: token },
-                        success: function (res) {
-                            if (res.success) {
-                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
-                                setTimeout(() => location.reload(), 1500);
-                            } else {
-                                Swal.fire('Error', res.message, 'error');
-                            }
-                        }
-                    });
-                }
-            });
-        }
+function submitEdit() {
+var form = $('#editForm')[0];
+var formData = new FormData(form);
+formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
 
-        function openAssignModal(id, currentTech) {
-            $('#assignForm')[0].reset();
-            $('#assignComplaintId').val(id);
-            if(currentTech > 0) {
-                $('#assignTech').val(currentTech);
-            }
-            assignModal.show();
-        }
+$('#btnSubmitEdit').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
 
-        function submitAssign() {
-            var form = $('#assignForm')[0];
-            var formData = new FormData(form);
-            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+$.ajax({
+url: '/Complaint/Edit',
+type: 'POST',
+data: formData,
+processData: false,
+contentType: false,
+success: function (res) {
+if (res.success) {
+Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+setTimeout(() => location.reload(), 1500);
+}
+else
+{
+    Swal.fire('Error', res.message, 'error');
+    $('#btnSubmitEdit').prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Changes');
+}
+}
+});
+}
 
-            $('#btnSubmitAssign').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Assigning...');
+function deleteComplaint(id) {
+Swal.fire({
+title: 'Are you sure?',
+text: "You won't be able to revert this! The attached photo will also be deleted.",
+icon: 'warning',
+showCancelButton: true,
+confirmButtonColor: '#d33',
+cancelButtonColor: '#3085d6',
+confirmButtonText: 'Yes, delete it!'
+}).then((result) => {
+if (result.isConfirmed) {
+var token = $('input[name="__RequestVerificationToken"]').val();
+$.ajax({
+url: '/Complaint/Delete',
+type: 'POST',
+data: { complaintId: id, __RequestVerificationToken: token },
+success: function (res) {
+if (res.success) {
+Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+setTimeout(() => location.reload(), 1500);
+}
+else
+{
+    Swal.fire('Error', res.message, 'error');
+}
+}
+});
+}
+});
+}
 
-            $.ajax({
-                url: '/Complaint/Assign',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function (res) {
-                    if (res.success) {
-                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        Swal.fire('Error', res.message, 'error');
-                        $('#btnSubmitAssign').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Assign Task');
-                    }
-                }
-            });
-        }
+function openAssignModal(id, currentTech) {
+$('#assignForm')[0].reset();
+$('#assignComplaintId').val(id);
+if(currentTech > 0) {
+$('#assignTech').val(currentTech);
+}
+assignModal.show();
+}
 
-        function openStatusModal(id, status, remarks) {
-            $('#statusForm')[0].reset();
-            $('#statusComplaintId').val(id);
-            $('#statusSelect').val(status);
-            $('#statusRemarks').val(decodeURIComponent(remarks));
-            statusModal.show();
-        }
+function submitAssign() {
+var form = $('#assignForm')[0];
+var formData = new FormData(form);
+formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
 
-        function submitStatus() {
-            var form = $('#statusForm')[0];
-            var formData = new FormData(form);
-            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+$('#btnSubmitAssign').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Assigning...');
 
-            $('#btnSubmitStatus').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+$.ajax({
+url: '/Complaint/Assign',
+type: 'POST',
+data: formData,
+processData: false,
+contentType: false,
+success: function (res) {
+if (res.success) {
+Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+setTimeout(() => location.reload(), 1500);
+}
+else
+{
+    Swal.fire('Error', res.message, 'error');
+    $('#btnSubmitAssign').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Assign Task');
+}
+}
+});
+}
 
-            $.ajax({
-                url: '/Complaint/UpdateStatus',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function (res) {
-                    if (res.success) {
-                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        Swal.fire('Error', res.message, 'error');
-                        $('#btnSubmitStatus').prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Status');
-                    }
-                }
-            });
-        }
-        
-        function viewComplaint(id, title, desc, resident, cat, status, remarks, photoUrl) {
-            $('#viewTitle').text(decodeURIComponent(title));
-            $('#viewCategory').text(cat);
-            $('#viewStatus').text(status);
-            $('#viewDescription').text(decodeURIComponent(desc));
-            
-            var rem = decodeURIComponent(remarks);
-            if(rem) {
-                $('#viewRemarks').text(rem).removeClass('fst-italic').addClass('fw-semibold');
-            } else {
-                $('#viewRemarks').text('No remarks added yet.').addClass('fst-italic').removeClass('fw-semibold');
-            }
+function openStatusModal(id, status, remarks) {
+$('#statusForm')[0].reset();
+$('#statusComplaintId').val(id);
+$('#statusSelect').val(status);
+$('#statusRemarks').val(decodeURIComponent(remarks));
+statusModal.show();
+}
 
-            if(photoUrl && photoUrl !== '') {
-                $('#viewPhotoContainer').html('<img src="' + photoUrl + '" class="img-fluid w-100" style="object-fit: cover;" alt="Complaint Photo" />');
-            } else {
-                $('#viewPhotoContainer').html('<div class="text-center text-muted p-4"><i class="fa-solid fa-image-slash fs-1 mb-2 opacity-50"></i><p class="mb-0 small fw-semibold">No Photo Attached</p></div>');
-            }
-            
-            viewModal.show();
-        }
-    </script>
+function submitStatus() {
+var form = $('#statusForm')[0];
+var formData = new FormData(form);
+formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+
+$('#btnSubmitStatus').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+
+$.ajax({
+url: '/Complaint/UpdateStatus',
+type: 'POST',
+data: formData,
+processData: false,
+contentType: false,
+success: function (res) {
+if (res.success) {
+Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+setTimeout(() => location.reload(), 1500);
+}
+else
+{
+    Swal.fire('Error', res.message, 'error');
+    $('#btnSubmitStatus').prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Status');
+}
+}
+});
+}
+
+function viewComplaint(id, title, desc, resident, cat, status, remarks, photoUrl) {
+$('#viewTitle').text(decodeURIComponent(title));
+$('#viewCategory').text(cat);
+$('#viewStatus').text(status);
+$('#viewDescription').text(decodeURIComponent(desc));
+
+var rem = decodeURIComponent(remarks);
+if(rem) {
+$('#viewRemarks').text(rem).removeClass('fst-italic').addClass('fw-semibold');
+}
+else
+{
+    $('#viewRemarks').text('No remarks added yet.').addClass('fst-italic').removeClass('fw-semibold');
+}
+
+if(photoUrl && photoUrl !== '') {
+$('#viewPhotoContainer').html('<img src="' + photoUrl + '" class="img-fluid w-100" style="object-fit: cover;" alt="Complaint Photo" />');
+}
+else
+{
+    $('#viewPhotoContainer').html('<div class="text-center text-muted p-4"><i class="fa-solid fa-image-slash fs-1 mb-2 opacity-50"></i><p class="mb-0 small fw-semibold">No Photo Attached</p></div>');
+}
+
+viewModal.show();
+}
+</script>
 }
