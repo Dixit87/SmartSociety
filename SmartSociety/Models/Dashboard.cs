@@ -62,4 +62,23 @@ namespace SmartSociety.Models
         public List<MonthlyRevenueDto> RevenueChart { get; set; } = new List<MonthlyRevenueDto>();
         public List<ComplaintStatDto> ComplaintStats { get; set; } = new List<ComplaintStatDto>();
     }
+
+    public class GuardDashboardViewModel
+    {
+        public int ActiveVisitorsCount { get; set; }
+        public int PendingApprovalsCount { get; set; }
+        public int TodayTotalVisitorsCount { get; set; }
+        public List<Visitor> ActiveVisitors { get; set; } = new List<Visitor>();
+        public List<Visitor> ExpectedVisitors { get; set; } = new List<Visitor>();
+    }
+
+    public class TechnicianDashboardViewModel
+    {
+        public int AssignedComplaintsCount { get; set; }
+        public int InProgressComplaintsCount { get; set; }
+        public int ResolvedComplaintsCount { get; set; }
+        public List<Complaint> ActiveComplaints { get; set; } = new List<Complaint>();
+        public List<Complaint> ResolvedHistory { get; set; } = new List<Complaint>();
+        public List<Asset> AssetsRequiringService { get; set; } = new List<Asset>();
+    }
 }

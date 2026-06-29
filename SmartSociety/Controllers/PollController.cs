@@ -3,8 +3,11 @@ using SmartSociety.Models;
 using SmartSociety.Repositories;
 using System.Threading.Tasks;
 
+using Microsoft.AspNetCore.Authorization;
+
 namespace SmartSociety.Controllers
 {
+    [Authorize]
     public class PollController : Controller
     {
         private readonly IPollRepository _repository;
@@ -22,6 +25,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreatePoll([FromBody] PollUpsertViewModel model)
         {
             try
@@ -42,6 +46,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeletePoll(int pollId)
         {
             try
@@ -73,16 +78,27 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MockVote(int pollId, int optionId)
+        public async Task<IActionResult> CastVote(int pollId, int optionId)
         {
             try
             {
-                await _repository.MockVoteAsync(pollId, optionId);
-                return Json(new { success = true, message = "Mock vote cast successfully!" });
+                var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+                {
+                    return Json(new { success = false, message = "Unauthorized. Please login to cast your vote." });
+                }
+
+                bool result = await _repository.CastVoteAsync(pollId, optionId, userId);
+                if (!result)
+                {
+                    return Json(new { success = false, message = "You have already voted in this poll!" });
+                }
+
+                return Json(new { success = true, message = "Your vote has been cast successfully!" });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error casting mock vote." });
+                return Json(new { success = false, message = "Error casting vote: " + ex.Message });
             }
         }
     }

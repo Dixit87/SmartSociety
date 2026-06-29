@@ -161,5 +161,144 @@ namespace SmartSociety.Repositories
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
+
+        // Maintenance Schedule Operations
+        public async Task<IEnumerable<MaintenanceSchedule>> GetMaintenanceSchedulesAsync()
+        {
+            return await _dbConnection.QueryAsync<MaintenanceSchedule>(
+                "sp_MaintenanceSchedules_GetAll",
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<MaintenanceSchedule?> GetMaintenanceScheduleByIdAsync(int scheduleId)
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("@ScheduleId", scheduleId);
+
+            return await _dbConnection.QueryFirstOrDefaultAsync<MaintenanceSchedule>(
+                "sp_MaintenanceSchedules_GetById",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<int> UpsertMaintenanceScheduleAsync(MaintenanceSchedule schedule)
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("@ScheduleId", schedule.ScheduleId);
+            parameters.Add("@AssetId", schedule.AssetId);
+            parameters.Add("@TaskName", schedule.TaskName);
+            parameters.Add("@FrequencyMonths", schedule.FrequencyMonths);
+            parameters.Add("@LastServiceDate", schedule.LastServiceDate);
+            parameters.Add("@NextDueDate", schedule.NextDueDate);
+            parameters.Add("@Notes", schedule.Notes);
+            parameters.Add("@IsActive", schedule.IsActive);
+
+            return await _dbConnection.QuerySingleAsync<int>(
+                "sp_MaintenanceSchedules_Upsert",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task DeleteMaintenanceScheduleAsync(int scheduleId)
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("@ScheduleId", scheduleId);
+
+            await _dbConnection.ExecuteAsync(
+                "sp_MaintenanceSchedules_Delete",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<int> ProcessDueMaintenanceSchedulesAsync()
+        {
+            return await _dbConnection.QuerySingleAsync<int>(
+                "sp_MaintenanceSchedules_ProcessDue",
+                commandType: CommandType.StoredProcedure);
+        }
+
+        // Inventory Operations
+        public async Task<IEnumerable<InventoryItem>> GetAllInventoryItemsAsync()
+        {
+            return await _dbConnection.QueryAsync<InventoryItem>(
+                "sp_InventoryItems_GetAll",
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<InventoryItem?> GetInventoryItemByIdAsync(int itemId)
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("@ItemId", itemId);
+
+            return await _dbConnection.QueryFirstOrDefaultAsync<InventoryItem>(
+                "sp_InventoryItems_GetById",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<int> UpsertInventoryItemAsync(InventoryItem item)
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("@ItemId", item.ItemId);
+            parameters.Add("@ItemName", item.ItemName);
+            parameters.Add("@Quantity", item.Quantity);
+            parameters.Add("@Unit", item.Unit);
+            parameters.Add("@CostPerUnit", item.CostPerUnit);
+            parameters.Add("@MinStockLevel", item.MinStockLevel);
+
+            return await _dbConnection.QuerySingleAsync<int>(
+                "sp_InventoryItems_Upsert",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task DeleteInventoryItemAsync(int itemId)
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("@ItemId", itemId);
+
+            await _dbConnection.ExecuteAsync(
+                "sp_InventoryItems_Delete",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task DeductInventoryStockAsync(int itemId, int quantityUsed)
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("@ItemId", itemId);
+            parameters.Add("@QuantityUsed", quantityUsed);
+
+            await _dbConnection.ExecuteAsync(
+                "sp_InventoryItems_DeductStock",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        // Complaint Spare Parts Operations
+        public async Task<IEnumerable<ComplaintSparePart>> GetSparePartsByComplaintIdAsync(int complaintId)
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("@ComplaintId", complaintId);
+
+            return await _dbConnection.QueryAsync<ComplaintSparePart>(
+                "sp_ComplaintSpareParts_GetByComplaintId",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task SaveComplaintSparePartAsync(ComplaintSparePart part)
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("@ComplaintId", part.ComplaintId);
+            parameters.Add("@ItemId", part.ItemId);
+            parameters.Add("@QuantityUsed", part.QuantityUsed);
+            parameters.Add("@CostPerUnit", part.CostPerUnit);
+
+            await _dbConnection.ExecuteAsync(
+                "sp_ComplaintSpareParts_Create",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
     }
 }

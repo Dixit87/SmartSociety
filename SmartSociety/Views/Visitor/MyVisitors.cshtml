@@ -1,0 +1,914 @@
+@model IEnumerable<SmartSociety.Models.Visitor>
+
+@{
+    ViewData["Title"] = "My Visitors";
+    var flat = ViewBag.Flat as SmartSociety.Models.Flat;
+}
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-2">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item text-muted">Gate Security</li>
+    <li class="breadcrumb-item active fw-bold text-primary" aria-current="page">My Visitors</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">My Visitors Log</h2>
+        <p class="text-muted mb-0">Manage and pre-register guests for Flat @(flat?.BlockName)-@(flat?.FlatNumber).</p>
+    </div>
+    <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill shadow-sm" onclick="openPreRegisterModal()">
+        <i class="fa-solid fa-user-plus me-2"></i> Pre-Register Guest
+    </button>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="bg-primary bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-id-badge fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Total Logs</p>
+                <h4 class="fw-bold text-dark mb-0">@Model.Count()</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-warning bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-warning text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-person-walking-arrow-right fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Currently Inside</p>
+                <h4 class="fw-bold text-dark mb-0">@Model.Count(v => v.Status == "Inside")</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-success bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-success text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-circle-check fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Pre-Registered Guests</p>
+                <h4 class="fw-bold text-dark mb-0">@Model.Count(v => v.Status == "Pending" && v.InTime > DateTime.Now)</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Child Exit Safety Alerts for Resident Parent -->
+@if (ViewBag.ChildRequests != null)
+{
+    var pendingChildRequests = ((IEnumerable<SmartSociety.Models.ChildExitRequest>)ViewBag.ChildRequests).Where(r => r.Status == "Pending");
+    if (pendingChildRequests.Any())
+    {
+        foreach (var req in pendingChildRequests)
+        {
+            <div class="alert alert-danger border-0 rounded-4 shadow-sm p-4 mb-4 d-flex justify-content-between align-items-center animate-pulse" role="alert" style="border-left: 5px solid #dc3545 !important;">
+                <div class="d-flex align-items-center">
+                    <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; min-width: 50px;">
+                        <i class="fa-solid fa-child-reaching fa-xl"></i>
+                    </div>
+                    <div>
+                        <h5 class="alert-heading fw-bold mb-1 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i> Child Exit Authorization Required!</h5>
+                        <p class="mb-0 text-dark">Your child <strong>@req.ChildName</strong> is trying to exit the society gate alone. Guard Remarks: <em>"@req.GuardRemarks"</em></p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 ms-3">
+                    <button class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm" onclick="actionChildRequest(@req.RequestId, 'Approved')">
+                        <i class="fa-solid fa-check me-1"></i> Approve Exit
+                    </button>
+                    <button class="btn btn-danger rounded-pill px-4 fw-semibold shadow-sm" onclick="actionChildRequest(@req.RequestId, 'Rejected')">
+                        <i class="fa-solid fa-xmark me-1"></i> Stop Child!
+                    </button>
+                </div>
+            </div>
+        }
+    }
+}
+
+<style>
+    #pills-tab .nav-link {
+        background-color: #ffffff;
+        color: #212529;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+    }
+    #pills-tab .nav-link:hover {
+        background-color: #f8f9fa;
+        color: #000000;
+    }
+    #pills-tab .nav-link.active {
+        background-color: #0d6efd !important;
+        color: #ffffff !important;
+        border-color: #0d6efd;
+    }
+    @@keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+    .animate-pulse {
+        animation: pulse 2s infinite;
+    }
+</style>
+
+<ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-bold px-4 py-2.5 rounded-pill shadow-sm" id="pills-guests-tab" data-bs-toggle="pill" data-bs-target="#pills-guests" type="button" role="tab" aria-controls="pills-guests" aria-selected="true">
+            <i class="fa-solid fa-user-group me-2"></i> Guests & Invites
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold px-4 py-2.5 rounded-pill ms-2 shadow-sm text-dark bg-white border border-light" id="pills-parcels-tab" data-bs-toggle="pill" data-bs-target="#pills-parcels" type="button" role="tab" aria-controls="pills-parcels" aria-selected="false">
+            <i class="fa-solid fa-box me-2 text-warning"></i> Parcels at Gate
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold px-4 py-2.5 rounded-pill ms-2 shadow-sm text-dark bg-white border border-light" id="pills-child-tab" data-bs-toggle="pill" data-bs-target="#pills-child" type="button" role="tab" aria-controls="pills-child" aria-selected="false">
+            <i class="fa-solid fa-child me-2 text-danger"></i> Child Exit Permits
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold px-4 py-2.5 rounded-pill ms-2 shadow-sm text-dark bg-white border border-light" id="pills-helpers-tab" data-bs-toggle="pill" data-bs-target="#pills-helpers" type="button" role="tab" aria-controls="pills-helpers" aria-selected="false">
+            <i class="fa-solid fa-user-check me-2 text-success"></i> Daily Helpers
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="pills-tabContent">
+    <div class="tab-pane fade show active" id="pills-guests" role="tabpanel" aria-labelledby="pills-guests-tab">
+        <div class="bg-white rounded-4 shadow-sm p-4">
+            @if (Model == null || !Model.Any())
+            {
+                <div class="text-center py-5">
+                    <img src="https://img.icons8.com/illustrations/external-justicon-lineal-color-justicon/120/external-security-guard-hotel-services-justicon-lineal-color-justicon.png" alt="No Visitors" class="mb-3 opacity-75" />
+                    <h5 class="fw-bold text-secondary">No Visitor History Found</h5>
+                    <p class="text-muted">You can pre-register your upcoming guests so they can easily enter past security.</p>
+                    <button class="btn btn-primary rounded-pill px-4 mt-2" onclick="openPreRegisterModal()"><i class="fa-solid fa-user-plus me-1"></i> Pre-Register First Guest</button>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="myVisitorsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Visitor Details</th>
+                                <th class="text-secondary fw-semibold py-3 border-0">Purpose & Vehicle</th>
+                                <th class="text-secondary fw-semibold py-3 border-0">In-Time / Scheduled</th>
+                                <th class="text-secondary fw-semibold py-3 border-0">Out-Time</th>
+                                <th class="text-secondary fw-semibold py-3 border-0">Status</th>
+                                <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="border-top-0">
+                            @foreach (var visitor in Model)
+                            {
+                                <tr>
+                                    <td class="py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-light rounded-circle d-flex justify-content-center align-items-center text-muted me-3" style="width: 42px; height: 42px;">
+                                                @if(visitor.VisitorType == "Guest") { <i class="fa-solid fa-user-group text-primary"></i> }
+                                                else if(visitor.VisitorType == "Delivery") { <i class="fa-solid fa-box text-warning"></i> }
+                                                else if(visitor.VisitorType == "Maid/Helper") { <i class="fa-solid fa-broom text-success"></i> }
+                                                else { <i class="fa-solid fa-id-badge text-secondary"></i> }
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-dark">@visitor.FullName</h6>
+                                                <div class="small text-muted"><i class="fa-solid fa-phone fa-sm me-1"></i> @visitor.PhoneNumber</div>
+                                                <span class="badge bg-secondary-subtle text-secondary px-2 py-0 mt-1">@visitor.VisitorType</span>
+                                                @if(!string.IsNullOrEmpty(visitor.InviteCode))
+                                                {
+                                                    <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-0 mt-1 ms-1"><i class="fa-solid fa-key me-1"></i> Code: @visitor.InviteCode</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if(!string.IsNullOrEmpty(visitor.Purpose))
+                                        {
+                                            <div class="text-dark fw-medium small">@visitor.Purpose</div>
+                                        }
+                                        @if(!string.IsNullOrEmpty(visitor.VehicleNumber))
+                                        {
+                                            <div class="text-muted small mt-1 font-monospace"><i class="fa-solid fa-car-side fa-sm me-1"></i> @visitor.VehicleNumber</div>
+                                        }
+                                        @if(string.IsNullOrEmpty(visitor.Purpose) && string.IsNullOrEmpty(visitor.VehicleNumber))
+                                        {
+                                            <span class="text-muted small">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-dark">@visitor.InTime.ToString("hh:mm tt")</div>
+                                        <div class="small text-muted">@visitor.InTime.ToString("dd MMM yyyy")</div>
+                                    </td>
+                                    <td>
+                                        @if(visitor.OutTime.HasValue)
+                                        {
+                                            <div class="fw-semibold text-dark">@visitor.OutTime?.ToString("hh:mm tt")</div>
+                                            <div class="small text-muted">@visitor.OutTime?.ToString("dd MMM yyyy")</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (visitor.Status == "Pending")
+                                        {
+                                            @if(visitor.InTime > DateTime.Now)
+                                            {
+                                                <span class="badge bg-info-subtle text-info px-2 py-1"><i class="fa-solid fa-calendar-check me-1"></i> Pre-Registered</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary-subtle text-secondary px-2 py-1"><i class="fa-solid fa-clock me-1"></i> Awaiting Entry</span>
+                                            }
+                                        }
+                                        else if (visitor.Status == "Inside")
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="fa-solid fa-door-open me-1"></i> Inside</span>
+                                        }
+                                        else if (visitor.Status == "Rejected")
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="fa-solid fa-xmark me-1"></i> Rejected</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success-subtle text-success px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i> Checked Out</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (visitor.Status == "Pending" && visitor.InTime > DateTime.Now)
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold shadow-sm" onclick="showPassCard('@visitor.FullName', '@visitor.PhoneNumber', '@visitor.VisitorType', '@(visitor.VehicleNumber ?? "N/A")', '@visitor.InTime.ToString("dd MMM yyyy hh:mm tt")', '@visitor.VisitorId', '@visitor.InviteCode')">
+                                                <i class="fa-solid fa-qrcode me-1"></i> Invite Pass
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+        </div>
+    </div>
+    
+    <div class="tab-pane fade" id="pills-parcels" role="tabpanel" aria-labelledby="pills-parcels-tab">
+        <div class="bg-white rounded-4 shadow-sm p-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="parcelsTable" style="width: 100%">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Courier Info</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Delivery Agent</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Receipt Photo</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Logged At</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Status</th>
+                            <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="border-top-0">
+                        @if (ViewBag.Deliveries != null && ((IEnumerable<SmartSociety.Models.Delivery>)ViewBag.Deliveries).Any())
+                        {
+                            foreach (var delivery in (IEnumerable<SmartSociety.Models.Delivery>)ViewBag.Deliveries)
+                            {
+                                <tr>
+                                    <td class="py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-warning bg-opacity-10 rounded-circle d-flex justify-content-center align-items-center text-warning me-3" style="width: 42px; height: 42px;">
+                                                <i class="fa-solid fa-box text-warning"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-dark">@delivery.Company</h6>
+                                                <span class="badge bg-warning-subtle text-warning px-2 py-0 mt-1">Parcel</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-dark">@delivery.DeliveryAgentName</div>
+                                        <div class="small text-muted"><i class="fa-solid fa-phone fa-sm me-1"></i> @delivery.DeliveryAgentPhone</div>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(delivery.ReceiptPhoto))
+                                        {
+                                            <a href="@delivery.ReceiptPhoto" target="_blank" class="btn btn-sm btn-light border rounded-pill px-3">
+                                                <i class="fa-solid fa-image me-1 text-primary"></i> View Receipt
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-dark">@delivery.LoggedAt.ToString("hh:mm tt")</div>
+                                        <div class="small text-muted">@delivery.LoggedAt.ToString("dd MMM yyyy")</div>
+                                    </td>
+                                    <td>
+                                        @if (delivery.Status == "LoggedAtGate")
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="fa-solid fa-house-laptop me-1"></i> Waiting at Gate</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success-subtle text-success px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i> Collected</span>
+                                            <div class="small text-muted mt-1">@delivery.CollectedAt?.ToString("hh:mm tt, dd MMM")</div>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (delivery.Status == "LoggedAtGate")
+                                        {
+                                            <button class="btn btn-sm btn-success rounded-pill px-3 fw-semibold shadow-sm" onclick="markCollected(@delivery.DeliveryId)">
+                                                <i class="fa-solid fa-check me-1"></i> Collected
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small fst-italic">Handed Over</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="pills-child" role="tabpanel" aria-labelledby="pills-child-tab">
+        <div class="bg-white rounded-4 shadow-sm p-4">
+            <h5 class="fw-bold mb-3 text-dark"><i class="fa-solid fa-child me-2 text-danger"></i> Child Gate Exit Permits</h5>
+            <p class="text-muted small mb-4">View today's gate exit requests for unaccompanied children from your flat. Action is required to allow or deny gate exit.</p>
+
+            @if (ViewBag.ChildRequests != null && ((IEnumerable<SmartSociety.Models.ChildExitRequest>)ViewBag.ChildRequests).Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="childExitLogTable" style="width:100%">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-secondary fw-semibold border-0 rounded-start">Child Name</th>
+                                <th class="text-secondary fw-semibold border-0">Requested At</th>
+                                <th class="text-secondary fw-semibold border-0">Guard Remarks</th>
+                                <th class="text-secondary fw-semibold border-0">Status</th>
+                                <th class="text-end text-secondary fw-semibold border-0 rounded-end">Actions / Actioned At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var req in (IEnumerable<SmartSociety.Models.ChildExitRequest>)ViewBag.ChildRequests)
+                            {
+                                <tr>
+                                    <td class="py-3">
+                                        <div class="fw-bold text-dark"><i class="fa-solid fa-child-reaching text-muted me-2"></i> @req.ChildName</div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-dark">@req.CreatedAt.ToString("hh:mm tt")</div>
+                                        <div class="small text-muted">@req.CreatedAt.ToString("dd MMM yyyy")</div>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(req.GuardRemarks))
+                                        {
+                                            <span class="text-muted small fst-italic">"@req.GuardRemarks"</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (req.Status == "Pending")
+                                        {
+                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning-subtle px-2 py-1"><i class="fa-solid fa-hourglass-half me-1"></i> Awaiting Action</span>
+                                        }
+                                        else if (req.Status == "Approved")
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i> Allowed</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1"><i class="fa-solid fa-circle-xmark me-1"></i> Exit Denied</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (req.Status == "Pending")
+                                        {
+                                            <div class="d-flex gap-2 justify-content-end">
+                                                <button class="btn btn-sm btn-success rounded-pill px-3 fw-semibold shadow-sm" onclick="actionChildRequest(@req.RequestId, 'Approved')">
+                                                    <i class="fa-solid fa-check me-1"></i> Approve
+                                                </button>
+                                                <button class="btn btn-sm btn-danger rounded-pill px-3 fw-semibold shadow-sm" onclick="actionChildRequest(@req.RequestId, 'Rejected')">
+                                                    <i class="fa-solid fa-xmark me-1"></i> Reject
+                                                </button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            if (req.ActionedAt.HasValue)
+                                            {
+                                                <div class="fw-semibold text-dark">@req.ActionedAt.Value.ToString("hh:mm tt")</div>
+                                                <div class="small text-muted">@req.ActionedAt.Value.ToString("dd MMM yyyy")</div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">-</span>
+                                            }
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fa-solid fa-child-reaching fa-2xl text-muted opacity-50 mb-3 d-block"></i>
+                    <h6 class="text-muted fw-bold">No exit requests logged today.</h6>
+                    <p class="small text-muted mb-0">Unaccompanied child gate exits will trigger alert requests here for parent authorization.</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="pills-helpers" role="tabpanel" aria-labelledby="pills-helpers-tab">
+        <div class="bg-white rounded-4 shadow-sm p-4">
+            <h5 class="fw-bold mb-3 text-dark"><i class="fa-solid fa-house-laptop me-2 text-primary"></i> Flat Helpers & Today's Attendance</h5>
+            <p class="text-muted small mb-4">View daily helper staff assigned to your flat and track their check-in and check-out status at the society gate today.</p>
+            
+            <div class="row g-3">
+                @if (ViewBag.Helpers != null && ((IEnumerable<dynamic>)ViewBag.Helpers).Any())
+                {
+                    foreach (var item in (IEnumerable<dynamic>)ViewBag.Helpers)
+                    {
+                        var staff = item.Staff;
+                        var attendance = item.TodayAttendance;
+                        <div class="col-md-6 col-lg-4">
+                           <div class="card border-0 rounded-4 shadow-sm p-3 h-100 bg-light bg-opacity-50">
+                               <div class="d-flex align-items-center mb-3">
+                                   @if (!string.IsNullOrEmpty(staff.PhotoPath))
+                                   {
+                                       <img src="@staff.PhotoPath" class="rounded-circle me-3" style="width: 55px; height: 55px; object-fit: cover;" alt="@staff.FullName" />
+                                   }
+                                   else
+                                   {
+                                       <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 55px; height: 55px; min-width: 55px;">
+                                           <i class="fa-solid fa-user fa-xl"></i>
+                                       </div>
+                                   }
+                                   <div>
+                                       <h6 class="fw-bold mb-1 text-dark">@staff.FullName</h6>
+                                       <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2.5 py-0.5 small">@staff.Role</span>
+                                   </div>
+                               </div>
+                               <div class="border-top pt-2">
+                                   <div class="d-flex justify-content-between small mb-1">
+                                       <span class="text-muted">Contact:</span>
+                                       <span class="text-dark fw-medium">@staff.ContactNumber</span>
+                                   </div>
+                                   <div class="d-flex justify-content-between small mb-1">
+                                       <span class="text-muted">Shift Timing:</span>
+                                       <span class="text-dark fw-medium">@staff.ShiftStart.ToString(@"hh\:mm") - @staff.ShiftEnd.ToString(@"hh\:mm")</span>
+                                   </div>
+                                    <div class="d-flex justify-content-between align-items-center small mt-2">
+                                        <span class="text-muted">Status Today:</span>
+                                        @if (attendance == null)
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1"><i class="fa-solid fa-circle-exclamation me-1"></i> Not Present</span>
+                                        }
+                                        else if (attendance.CheckInTime != null && attendance.CheckOutTime == null)
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-2.5 py-1"><i class="fa-solid fa-right-to-bracket me-1"></i> Checked In (@(((TimeSpan)attendance.CheckInTime).ToString(@"hh\:mm")))</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle rounded-pill px-2.5 py-1"><i class="fa-solid fa-right-from-bracket me-1"></i> Checked Out (@(((TimeSpan)attendance.CheckOutTime).ToString(@"hh\:mm")))</span>
+                                        }
+                                     </div>
+                                     <div class="text-end mt-3 border-top pt-2">
+                                        <button class="btn btn-sm btn-light border rounded-pill px-3 py-1 fw-semibold w-100" onclick="viewHelperAttendanceHistory(@staff.StaffId, '@staff.FullName')">
+                                            <i class="fa-solid fa-clock-rotate-left me-1"></i> Attendance Log
+                                        </button>
+                                     </div>
+                               </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="col-12 text-center py-5">
+                       <i class="fa-solid fa-user-slash fa-2xl text-muted opacity-50 mb-3 d-block"></i>
+                       <h6 class="text-muted fw-bold">No helper staff assigned to your flat yet.</h6>
+                       <p class="small text-muted mb-0">Please contact society admin to assign maids, drivers, or cleaners to your flat.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pre-Register Guest Modal -->
+<div class="modal fade" id="preRegisterModal" tabindex="-1" aria-labelledby="preRegisterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-primary text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold" id="preRegisterModalLabel"><i class="fa-solid fa-user-plus me-2"></i> Pre-Register Guest</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="preRegisterForm" onsubmit="event.preventDefault(); submitPreRegistration();">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Guest Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control bg-light border-0" id="FullName" name="fullName" required placeholder="e.g. Sameer Dixit" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Mobile Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control bg-light border-0" id="PhoneNumber" name="phoneNumber" required maxlength="15" placeholder="e.g. 9876543210" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Visitor Type <span class="text-danger">*</span></label>
+                        <select class="form-select bg-light border-0" id="VisitorType" name="visitorType" required>
+                            <option value="Guest" selected>Guest / Relative</option>
+                            <option value="Delivery">Delivery Driver</option>
+                            <option value="Maid/Helper">Maid / Helper</option>
+                            <option value="Vendor">Utility Vendor</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Scheduled Arrival Date & Time <span class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control bg-light border-0" id="ScheduledTime" name="scheduledTime" required value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Vehicle Number (Optional)</label>
+                        <input type="text" class="form-control bg-light border-0" id="VehicleNumber" name="vehicleNumber" placeholder="e.g. MH-12-PQ-9876" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Purpose of Visit (Optional)</label>
+                        <input type="text" class="form-control bg-light border-0" id="Purpose" name="purpose" placeholder="e.g. Weekend dinner party" />
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill shadow-sm fw-semibold" id="btnSubmitPre">
+                            <i class="fa-solid fa-check me-2"></i> Register Guest
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Invitation Pass Card Modal -->
+<div class="modal fade" id="passModal" tabindex="-1" aria-labelledby="passModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);">
+            <div class="modal-body p-4 text-white text-center">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold small letter-spacing-2 text-uppercase text-white-50"><i class="fa-solid fa-building me-1"></i> SmartSociety</span>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <h4 class="fw-bold mb-1">GUEST INVITATION PASS</h4>
+                <div class="text-white-50 small mb-4">Flat @(flat?.BlockName)-@(flat?.FlatNumber)</div>
+                
+                <div class="bg-white rounded-4 p-3 d-inline-block shadow-lg mb-4">
+                    <img id="pass-qr" src="" alt="Invitation QR Code" class="img-fluid" style="width: 160px; height: 160px;" />
+                </div>
+                
+                <div class="mb-4">
+                    <span class="text-white-50 text-xs text-uppercase d-block mb-1">Pass Code</span>
+                    <h3 class="fw-bold tracking-widest text-warning mb-0" id="pass-code" style="letter-spacing: 6px; font-size: 2.2rem;"></h3>
+                </div>
+                
+                <div class="bg-white bg-opacity-10 rounded-4 p-3 text-start mb-4 border border-white border-opacity-10">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <span class="text-white-50 text-xs text-uppercase d-block">Visitor Name</span>
+                            <span class="fw-bold text-sm" id="pass-name"></span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-white-50 text-xs text-uppercase d-block">Visitor Type</span>
+                            <span class="fw-bold text-sm" id="pass-type"></span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-white-50 text-xs text-uppercase d-block">Vehicle Number</span>
+                            <span class="fw-bold text-sm" id="pass-vehicle"></span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-white-50 text-xs text-uppercase d-block">Scheduled Time</span>
+                            <span class="fw-bold text-xs" id="pass-time"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-white-50 text-xs mb-4"><i class="fa-solid fa-shield-halved text-success me-1"></i> Present this pass code or QR code at the main gate for security entry.</div>
+                
+                <div class="d-flex gap-2 justify-content-center">
+                    <button class="btn btn-light rounded-pill px-4 fw-semibold w-100" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> Print Pass</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Helper Attendance History Modal -->
+<div class="modal fade" id="helperHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-primary text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-clock-rotate-left me-2"></i> Helper Attendance: <span id="historyHelperName"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white" style="max-height: 400px; overflow-y: auto;">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>In Time</th>
+                                <th>Out Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="helperHistoryTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        var preRegisterModal;
+        var passModal;
+        var helperHistoryModal;
+
+        $(document).ready(function() {
+            preRegisterModal = new bootstrap.Modal(document.getElementById('preRegisterModal'));
+            passModal = new bootstrap.Modal(document.getElementById('passModal'));
+            helperHistoryModal = new bootstrap.Modal(document.getElementById('helperHistoryModal'));
+
+            $('#myVisitorsTable').DataTable({
+                "pageLength": 10,
+                "ordering": false,
+                "responsive": true,
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search visitor history..."
+                }
+            });
+
+            $('#parcelsTable').DataTable({
+                "pageLength": 10,
+                "ordering": false,
+                "responsive": true,
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search parcels...",
+                    "emptyTable": "No parcels logged for your flat."
+                }
+            });
+
+            $('#childExitLogTable').DataTable({
+                "pageLength": 10,
+                "ordering": false,
+                "responsive": true,
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search exit logs..."
+                }
+            });
+        });
+
+        function actionChildRequest(requestId, actionStatus) {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var actionText = actionStatus === 'Approved' ? 'Allow Child Exit' : 'Stop Child Exit';
+            var confirmBtnColor = actionStatus === 'Approved' ? '#198754' : '#dc3545';
+            
+            Swal.fire({
+                title: actionText,
+                text: `Are you sure you want to mark this request as ${actionStatus.toLowerCase()}?`,
+                icon: actionStatus === 'Approved' ? 'success' : 'warning',
+                showCancelButton: true,
+                confirmButtonColor: confirmBtnColor,
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Confirm'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/Visitor/ActionChildExitRequest',
+                        type: 'POST',
+                        data: {
+                            id: requestId,
+                            status: actionStatus,
+                            __RequestVerificationToken: token
+                        },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: res.message,
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Error', 'Failed to action the child exit request.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function openPreRegisterModal() {
+            $('#preRegisterForm')[0].reset();
+            $('#ScheduledTime').val(new Date(new Date().getTime() - new Date().getTimezoneOffset()*60000).toISOString().slice(0, 16));
+            preRegisterModal.show();
+        }
+
+        function submitPreRegistration() {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var data = {
+                fullName: $('#FullName').val(),
+                phoneNumber: $('#PhoneNumber').val(),
+                visitorType: $('#VisitorType').val(),
+                vehicleNumber: $('#VehicleNumber').val(),
+                purpose: $('#Purpose').val(),
+                scheduledTime: $('#ScheduledTime').val(),
+                __RequestVerificationToken: token
+            };
+
+            $('#btnSubmitPre').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Registering...');
+
+            $.ajax({
+                url: '/Visitor/PreRegister',
+                type: 'POST',
+                data: data,
+                success: function(res) {
+                    if (res.success) {
+                        preRegisterModal.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Guest Registered!',
+                            text: res.message,
+                            showCancelButton: true,
+                            confirmButtonText: '<i class="fa-solid fa-qrcode me-1"></i> Generate Pass',
+                            cancelButtonText: 'Done',
+                            confirmButtonColor: '#0d6efd',
+                            cancelButtonColor: '#6c757d'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                showPassCard(data.fullName, data.phoneNumber, data.visitorType, data.vehicleNumber || 'N/A', new Date(data.scheduledTime).toLocaleString(), res.visitorId, res.inviteCode);
+                            } else {
+                                location.reload();
+                            }
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmitPre').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Register Guest');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnSubmitPre').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Register Guest');
+                }
+            });
+        }
+
+        function showPassCard(name, phone, type, vehicle, time, visitorId, inviteCode) {
+            $('#pass-name').text(name);
+            $('#pass-type').text(type);
+            $('#pass-vehicle').text(vehicle);
+            $('#pass-time').text(time);
+            $('#pass-code').text(inviteCode);
+            
+            // Build the QR Code URL using the invite code as payload
+            var qrPayload = encodeURIComponent(inviteCode);
+            var qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${qrPayload}&color=1e3c72`;
+            $('#pass-qr').attr('src', qrUrl);
+
+            passModal.show();
+
+            // Reload page on modal close so table shows latest
+            document.getElementById('passModal').addEventListener('hidden.bs.modal', function () {
+                location.reload();
+            }, { once: true });
+        }
+
+        function markCollected(id) {
+            Swal.fire({
+                title: 'Collect Parcel?',
+                text: 'Confirm that you have collected this parcel from the gate security.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Collected'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Visitor/CollectDelivery/' + id,
+                        type: 'POST',
+                        data: { __RequestVerificationToken: token },
+                        success: function(res) {
+                            if (res.success) {
+                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                Swal.fire('Error!', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function viewHelperAttendanceHistory(helperId, helperName) {
+            $('#historyHelperName').text(helperName);
+            var tbody = $('#helperHistoryTableBody');
+            tbody.empty();
+            tbody.append('<tr><td colspan="3" class="text-center py-3"><i class="fa-solid fa-spinner fa-spin me-2"></i> Loading history...</td></tr>');
+            helperHistoryModal.show();
+
+            $.ajax({
+                url: '/Staff/GetAttendanceHistory',
+                type: 'GET',
+                data: { id: helperId },
+                success: function (res) {
+                    tbody.empty();
+                    if (res.success) {
+                        if (res.data.length === 0) {
+                            tbody.append('<tr><td colspan="3" class="text-center text-muted py-3">No attendance records found.</td></tr>');
+                        } else {
+                            res.data.forEach(function (log) {
+                                var dateObj = new Date(log.date);
+                                var formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                
+                                var checkInStr = log.checkInTime ? formatTimeSpan(log.checkInTime) : '<span class="text-muted">-</span>';
+                                var checkOutStr = log.checkOutTime ? formatTimeSpan(log.checkOutTime) : '<span class="text-muted">-</span>';
+                                
+                                tbody.append(`
+                                    <tr>
+                                        <td><strong>${formattedDate}</strong></td>
+                                        <td><span class="text-success fw-semibold"><i class="fa-solid fa-right-to-bracket me-1"></i> ${checkInStr}</span></td>
+                                        <td><span class="text-danger fw-semibold"><i class="fa-solid fa-right-from-bracket me-1"></i> ${checkOutStr}</span></td>
+                                    </tr>
+                                `);
+                            });
+                        }
+                    } else {
+                        tbody.append(`<tr><td colspan="3" class="text-center text-danger py-3">${res.message}</td></tr>`);
+                    }
+                },
+                error: function () {
+                    tbody.empty();
+                    tbody.append('<tr><td colspan="3" class="text-center text-danger py-3">Failed to retrieve helper history.</td></tr>');
+                }
+            });
+        }
+
+        function formatTimeSpan(timeSpan) {
+            if (!timeSpan) return '-';
+            var parts = timeSpan.split(':');
+            if (parts.length < 2) return timeSpan;
+            var hours = parseInt(parts[0], 10);
+            var minutes = parts[1];
+            var ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            var formattedHours = hours < 10 ? '0' + hours : hours;
+            return formattedHours + ':' + minutes + ' ' + ampm;
+        }
+    </script>
+}

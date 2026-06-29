@@ -9,9 +9,11 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using SmartSociety.Models;
 using SmartSociety.Repositories;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartSociety.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class SettingController : Controller
     {
         private readonly ISettingRepository _repository;

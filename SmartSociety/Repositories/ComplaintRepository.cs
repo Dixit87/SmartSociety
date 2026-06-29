@@ -94,6 +94,39 @@ namespace SmartSociety.Repositories
                 commandType: CommandType.StoredProcedure);
         }
 
+        public async Task<IEnumerable<Complaint>> GetByFlatIdAsync(int flatId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            string query = @"
+                SELECT 
+                    c.ComplaintId,
+                    c.FlatId,
+                    b.BlockName,
+                    f.FlatNumber,
+                    c.RaisedBy,
+                    u1.FullName AS ResidentName,
+                    c.Category,
+                    c.Title,
+                    c.Description,
+                    c.Priority,
+                    c.Status,
+                    c.AssignedTo,
+                    u2.FullName AS TechnicianName,
+                    c.AdminRemarks,
+                    c.PhotoUrl,
+                    c.CreatedAt,
+                    c.UpdatedAt,
+                    c.ResolvedAt
+                FROM Complaints c
+                INNER JOIN Flats f ON c.FlatId = f.FlatId
+                INNER JOIN Blocks b ON f.BlockId = b.BlockId
+                INNER JOIN Users u1 ON c.RaisedBy = u1.UserId
+                LEFT JOIN Users u2 ON c.AssignedTo = u2.UserId
+                WHERE c.FlatId = @FlatId
+                ORDER BY c.CreatedAt DESC;";
+            return await connection.QueryAsync<Complaint>(query, new { FlatId = flatId });
+        }
+
         public async Task DeleteAsync(int complaintId)
         {
             using var connection = new SqlConnection(_connectionString);

@@ -19,6 +19,11 @@ namespace SmartSociety.Repositories
         Task<IEnumerable<int>> GetAssignedFlatsAsync(int staffId);
         Task LogAttendanceAsync(int staffId, string logType);
         Task<IEnumerable<StaffAttendance>> GetAttendanceHistoryAsync(int staffId);
+        Task<IEnumerable<Staff>> GetStaffByFlatIdAsync(int flatId);
+        Task AddRatingAsync(StaffRating rating);
+        Task<IEnumerable<StaffRating>> GetRatingsByStaffIdAsync(int staffId);
+        Task<dynamic> GetAverageRatingAsync(int staffId);
+        Task<IEnumerable<dynamic>> GetAllStaffWithLiveStatusAndRatingsAsync();
     }
 
     public class StaffRepository : IStaffRepository
@@ -27,7 +32,7 @@ namespace SmartSociety.Repositories
 
         public StaffRepository(IConfiguration configuration)
         {
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _connectionString = configuration.GetConnectionString("DefaultConnection") ?? "";
         }
 
         public async Task<IEnumerable<Staff>> GetAllStaffAsync()
@@ -39,10 +44,10 @@ namespace SmartSociety.Repositories
         public async Task<Staff> GetStaffByIdAsync(int id)
         {
             using var connection = new SqlConnection(_connectionString);
-            return await connection.QuerySingleOrDefaultAsync<Staff>(
+            return (await connection.QuerySingleOrDefaultAsync<Staff>(
                 "sp_Staff_GetById",
                 new { StaffId = id },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure))!;
         }
 
         public async Task<int> SaveStaffAsync(Staff staff)
@@ -108,6 +113,79 @@ namespace SmartSociety.Repositories
                 "sp_Staff_GetAttendance",
                 new { StaffId = staffId },
                 commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<IEnumerable<Staff>> GetStaffByFlatIdAsync(int flatId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            string query = @"
+                SELECT s.* 
+                FROM Staff s
+                INNER JOIN StaffFlats sf ON s.StaffId = sf.StaffId
+                WHERE sf.FlatId = @FlatId AND s.IsActive = 1;";
+            return await connection.QueryAsync<Staff>(query, new { FlatId = flatId });
+        }
+
+        public async Task AddRatingAsync(StaffRating rating)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var parameters = new DynamicParameters();
+            parameters.Add("@StaffId", rating.StaffId);
+            parameters.Add("@UserId", rating.UserId);
+            parameters.Add("@Rating", rating.Rating);
+            parameters.Add("@Review", rating.Review);
+
+            await connection.ExecuteAsync(
+                "sp_StaffRatings_Add",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<IEnumerable<StaffRating>> GetRatingsByStaffIdAsync(int staffId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var parameters = new DynamicParameters();
+            parameters.Add("@StaffId", staffId);
+
+            return await connection.QueryAsync<StaffRating>(
+                "sp_StaffRatings_GetByStaffId",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<dynamic> GetAverageRatingAsync(int staffId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var parameters = new DynamicParameters();
+            parameters.Add("@StaffId", staffId);
+
+            return (await connection.QueryFirstOrDefaultAsync<dynamic>(
+                "sp_StaffRatings_GetAverageRating",
+                parameters,
+                commandType: CommandType.StoredProcedure))!;
+        }
+
+        public async Task<IEnumerable<dynamic>> GetAllStaffWithLiveStatusAndRatingsAsync()
+        {
+            using var connection = new SqlConnection(_connectionString);
+            string query = @"
+                SELECT 
+                    s.*,
+                    sa.CheckInTime,
+                    sa.CheckOutTime,
+                    COALESCE(r.AvgRating, 0.0) AS AvgRating,
+                    COALESCE(r.RatingCount, 0) AS RatingCount
+                FROM Staff s
+                LEFT JOIN StaffAttendance sa ON s.StaffId = sa.StaffId AND sa.Date = CAST(GETDATE() AS DATE)
+                LEFT JOIN (
+                    SELECT StaffId, AVG(CAST(Rating AS DECIMAL(3,2))) AS AvgRating, COUNT(*) AS RatingCount
+                    FROM StaffRatings
+                    GROUP BY StaffId
+                ) r ON s.StaffId = r.StaffId
+                WHERE s.IsActive = 1 AND s.IsVerified = 1 AND s.Role NOT IN ('Admin', 'Guard')
+                ORDER BY s.FullName ASC;";
+
+            return await connection.QueryAsync<dynamic>(query);
         }
     }
 }

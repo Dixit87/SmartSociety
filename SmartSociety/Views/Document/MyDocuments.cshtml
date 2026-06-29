@@ -1,0 +1,227 @@
+@model IEnumerable<SmartSociety.Models.SocietyDocument>
+
+@{
+    ViewData["Title"] = "My Documents";
+}
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-2">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item text-muted">Community</li>
+    <li class="breadcrumb-item active fw-bold text-primary" aria-current="page">Shared Documents</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Society Documents</h2>
+        <p class="text-muted mb-0">Browse and download shared documents, forms, rules, and circulars.</p>
+    </div>
+</div>
+
+<!-- Search & Category Filters -->
+<div class="bg-white rounded-4 shadow-sm p-4 mb-4">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text bg-light border-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                <input type="text" id="searchDocs" class="form-control bg-light border-0" placeholder="Search by document title..." onkeyup="filterDocuments()" />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex gap-2 justify-content-md-end overflow-x-auto pb-1">
+                <button type="button" class="btn btn-primary rounded-pill px-3.5 btn-filter active" onclick="filterCategory('All', this)">All Files</button>
+                <button type="button" class="btn btn-outline-light border text-dark rounded-pill px-3.5 btn-filter" onclick="filterCategory('Rules', this)">Rules & Regs</button>
+                <button type="button" class="btn btn-outline-light border text-dark rounded-pill px-3.5 btn-filter" onclick="filterCategory('Forms', this)">Forms</button>
+                <button type="button" class="btn btn-outline-light border text-dark rounded-pill px-3.5 btn-filter" onclick="filterCategory('Minutes', this)">Minutes</button>
+                <button type="button" class="btn btn-outline-light border text-dark rounded-pill px-3.5 btn-filter" onclick="filterCategory('Financials', this)">Financials</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-4 shadow-sm p-4">
+    @if (Model == null || !Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="fa-regular fa-folder-open fa-3x text-muted opacity-50 mb-3"></i>
+            <h5 class="fw-bold text-secondary">No Shared Documents</h5>
+            <p class="text-muted mb-0">No shared files have been uploaded for residents yet.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="documentsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Document Title</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">Category</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">Uploaded Date</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">File Format</th>
+                        <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    @foreach (var doc in Model)
+                    {
+                        var extension = System.IO.Path.GetExtension(doc.FilePath)?.TrimStart('.').ToUpper() ?? "FILE";
+                        <tr class="document-row" data-category="@doc.Category">
+                            <td class="py-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle d-flex justify-content-center align-items-center me-3 border" style="width: 40px; height: 40px; background-color: #f8f9fa;">
+                                        @if(extension == "PDF") { <i class="fa-solid fa-file-pdf text-danger fa-lg"></i> }
+                                        else if(extension == "DOC" || extension == "DOCX") { <i class="fa-solid fa-file-word text-primary fa-lg"></i> }
+                                        else if(extension == "XLS" || extension == "XLSX") { <i class="fa-solid fa-file-excel text-success fa-lg"></i> }
+                                        else if(extension == "JPG" || extension == "PNG" || extension == "JPEG") { <i class="fa-solid fa-file-image text-warning fa-lg"></i> }
+                                        else { <i class="fa-solid fa-file-lines text-secondary fa-lg"></i> }
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-dark doc-title">@doc.Title</h6>
+                                        <span class="text-muted small">Flat Circular</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-secondary border px-2.5 py-1">@doc.Category</span>
+                            </td>
+                            <td>
+                                <div class="fw-medium">@doc.UploadedAt.ToString("dd MMM yyyy")</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary px-2.5 py-1 font-monospace">@extension</span>
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 shadow-sm fw-semibold me-2 transition-all hover-scale" onclick="viewDocument('@doc.FilePath', '@doc.Title', '@extension')">
+                                    <i class="fa-solid fa-eye me-1"></i> View
+                                </button>
+                                <a href="@doc.FilePath" download target="_blank" class="btn btn-sm btn-primary rounded-pill px-3.5 shadow-sm fw-semibold transition-all hover-scale">
+                                    <i class="fa-solid fa-download me-1"></i> Download
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Document Viewer Modal -->
+<div class="modal fade" id="documentViewerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-bottom bg-white py-3 px-4">
+                <h5 class="modal-title fw-bold text-dark d-flex align-items-center" id="docViewerTitle">
+                    <i class="fa-solid fa-file-image fs-4 me-2 text-primary"></i> 
+                    <span>Document Viewer</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 text-center bg-dark position-relative d-flex align-items-center justify-content-center" style="height: 75vh;">
+                <div class="spinner-border text-light position-absolute" role="status" id="docViewerLoader" style="display: none; z-index: 1;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                
+                <!-- Image Preview -->
+                <img id="docViewerImg" src="" class="img-fluid shadow" style="display: none; max-height: 100%; object-fit: contain; z-index: 2;" alt="Document Preview" onload="$('#docViewerLoader').hide();" />
+                
+                <!-- PDF Preview -->
+                <iframe id="docViewerFrame" src="" class="w-100 border-0" style="display: none; height: 100%; z-index: 2;" onload="$('#docViewerLoader').hide();"></iframe>
+                
+                <!-- Error/Unsupported Preview -->
+                <div id="docViewerError" class="text-white p-5" style="display: none; z-index: 2;">
+                    <div class="bg-white bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
+                        <i class="fa-solid fa-file-circle-xmark fa-3x text-white-50"></i>
+                    </div>
+                    <h4 class="fw-bold">Preview Not Available</h4>
+                    <p class="text-white-50 mb-0">This file format cannot be previewed directly in the browser.</p>
+                    <p class="text-white-50 small">Please use the download button below to view it on your device.</p>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+                <span class="text-muted small fw-semibold" id="docViewerFormat"><i class="fa-solid fa-tag me-1"></i> Format</span>
+                <div>
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold me-2" data-bs-dismiss="modal">Close</button>
+                    <a href="#" id="docViewerDownloadBtn" download target="_blank" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm">
+                        <i class="fa-solid fa-download me-2"></i> Download File
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var activeCategory = 'All';
+
+        function filterDocuments() {
+            var input = document.getElementById('searchDocs').value.toUpperCase();
+            var rows = document.getElementsByClassName('document-row');
+
+            for (var i = 0; i < rows.length; i++) {
+                var title = rows[i].getElementsByClassName('doc-title')[0].innerText.toUpperCase();
+                var category = rows[i].getAttribute('data-category');
+                
+                var matchesSearch = title.indexOf(input) > -1;
+                var matchesCategory = activeCategory === 'All' || category === activeCategory;
+
+                if (matchesSearch && matchesCategory) {
+                    rows[i].style.display = "";
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+        }
+
+        function filterCategory(category, element) {
+            activeCategory = category;
+            
+            // Toggle active button style
+            $('.btn-filter').removeClass('btn-primary active').addClass('btn-outline-light text-dark border');
+            $(element).removeClass('btn-outline-light text-dark border').addClass('btn-primary active');
+
+            filterDocuments();
+        }
+
+        var viewerModal;
+        $(document).ready(function() {
+            viewerModal = new bootstrap.Modal(document.getElementById('documentViewerModal'));
+            
+            // Clear contents on modal hide to stop media playing/loading
+            document.getElementById('documentViewerModal').addEventListener('hidden.bs.modal', function () {
+                $('#docViewerImg').attr('src', '').hide();
+                $('#docViewerFrame').attr('src', '').hide();
+                $('#docViewerLoader').hide();
+            });
+        });
+
+        function viewDocument(url, title, ext) {
+            $('#docViewerTitle span').text(title);
+            $('#docViewerDownloadBtn').attr('href', url);
+            $('#docViewerFormat').html('<i class="fa-solid fa-tag me-1"></i> ' + ext + ' Document');
+            
+            $('#docViewerImg').hide();
+            $('#docViewerFrame').hide();
+            $('#docViewerError').hide();
+            $('#docViewerLoader').show();
+
+            var extUpper = ext.toUpperCase();
+            if (extUpper === 'JPG' || extUpper === 'JPEG' || extUpper === 'PNG' || extUpper === 'GIF' || extUpper === 'WEBP') {
+                $('#docViewerImg').attr('src', url).show();
+            } else if (extUpper === 'PDF') {
+                $('#docViewerFrame').attr('src', url).show();
+            } else {
+                $('#docViewerLoader').hide();
+                $('#docViewerError').show();
+            }
+
+            viewerModal.show();
+        }
+    </script>
+    <style>
+        .hover-scale { transition: transform 0.2s; }
+        .hover-scale:hover { transform: scale(1.05); }
+    </style>
+}

@@ -1,0 +1,375 @@
+@model IEnumerable<SmartSociety.Models.RfidGateLog>
+@{
+    ViewData["Title"] = "Smart RFID Gate Console";
+    var registeredVehicles = ViewBag.RegisteredVehicles as IEnumerable<SmartSociety.Models.ParkingSlot> ?? new List<SmartSociety.Models.ParkingSlot>();
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-dark fw-bold"><i class="fa-solid fa-car-tunnel text-primary me-2"></i> Smart RFID Gate Console</h1>
+            <p class="text-muted small mb-0">Monitor and simulate gate entry/exit logs via RFID tags connected to the boom barriers.</p>
+        </div>
+        <div class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-2 rounded-pill">
+            <i class="fa-solid fa-circle-dot fa-fade me-1.5 text-success"></i> RFID Reader Online
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Simulator & Controller Column -->
+        <div class="col-lg-5">
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-tower-broadcast text-muted me-1.5"></i> RFID Sweep Simulator</h5>
+                <form id="rfidForm" onsubmit="event.preventDefault(); triggerRfidSweep();">
+                    @Html.AntiForgeryToken()
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted mb-1">Select Registered Vehicle</label>
+                        <select class="form-select bg-light border-0 rounded-3" id="vehicleSelector" onchange="populateRfidTag()">
+                            <option value="">-- Manual Entry / Custom RFID Tag --</option>
+                            @foreach (var v in registeredVehicles)
+                            {
+                                <option value="@v.StickerNumber" data-number="@v.VehicleNumber">@v.BlockName-@v.FlatNumber | @v.VehicleNumber (@v.VehicleMakeModel) - RFID: @v.StickerNumber</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="rfidTag" class="form-label small fw-semibold text-muted mb-1">RFID Tag / Sticker Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control bg-light border-0 rounded-3" id="rfidTag" name="rfidTag" placeholder="Type RFID tag e.g. RFID-88719" required />
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted mb-1">Direction <span class="text-danger">*</span></label>
+                            <select class="form-select bg-light border-0 rounded-3" id="direction" name="direction" required>
+                                <option value="Entry">Entry (Inbound)</option>
+                                <option value="Exit">Exit (Outbound)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted mb-1">Gate Location <span class="text-danger">*</span></label>
+                            <select class="form-select bg-light border-0 rounded-3" id="gateName" name="gateName" required>
+                                <option value="Main Gate Entrance">Main Gate</option>
+                                <option value="North Entrance Gate">North Gate</option>
+                                <option value="South Service Gate">South Gate</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill py-2.5 fw-bold shadow-sm" id="btnSweep">
+                        <i class="fa-solid fa-circle-right me-1"></i> Scan / Sweep RFID Sticker
+                    </button>
+                </form>
+            </div>
+
+            <!-- Visual Boom Barrier Animation Card -->
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-dark text-white text-center position-relative overflow-hidden" style="min-height: 250px;">
+                <div class="position-absolute top-0 start-0 w-100 h-100 bg-gradient opacity-10" style="background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.8) 100%);"></div>
+                
+                <h6 class="fw-bold mb-1 text-white-50"><i class="fa-solid fa-traffic-light me-1"></i> Boom Barrier Status</h6>
+                <div id="barrierText" class="fs-4 fw-bold text-danger mb-3">CLOSED</div>
+
+                <!-- Graphical Barrier container -->
+                <div class="d-flex justify-content-center align-items-end" style="height: 120px; padding-bottom: 10px;">
+                    <!-- Post -->
+                    <div class="bg-secondary border border-light" style="width: 24px; height: 70px; border-radius: 4px 4px 0 0; position: relative;">
+                        <!-- Joint pivot -->
+                        <div class="bg-warning rounded-circle shadow" style="width: 14px; height: 14px; position: absolute; top: 8px; left: 4px; z-index: 10;"></div>
+                        <!-- Boom gate arm -->
+                        <div id="gateArm" class="bg-danger border border-white" style="width: 140px; height: 8px; position: absolute; top: 11px; left: 10px; transform-origin: left center; transform: rotate(0deg); transition: transform 0.8s ease-in-out; border-radius: 2px; background: repeating-linear-gradient(45deg, #dc3545, #dc3545 10px, #fff 10px, #fff 20px);"></div>
+                    </div>
+                    <!-- Ground base line -->
+                    <div class="w-75 bg-light opacity-25" style="height: 4px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Logs Table Column -->
+        <div class="col-lg-7">
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-list-ul text-muted me-1.5"></i> Live RFID Gate Logs</h5>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="refreshLogs()">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border-0" id="logsTable">
+                        <thead class="bg-light text-muted small">
+                            <tr>
+                                <th class="border-0">Time</th>
+                                <th class="border-0">Gate & Dir</th>
+                                <th class="border-0">Vehicle Info</th>
+                                <th class="border-0">Flat & Owner</th>
+                                <th class="border-0 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsBody" class="small text-secondary">
+                            @if (!Model.Any())
+                            {
+                                <tr id="noLogsRow">
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        <i class="fa-solid fa-folder-open fa-3x mb-3 text-secondary opacity-50 d-block"></i>
+                                        No entry/exit logs recorded today.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var log in Model)
+                                {
+                                    bool isAuth = log.Status.StartsWith("Authorized");
+                                    <tr>
+                                        <td>@log.Timestamp.ToString("hh:mm:ss tt")</td>
+                                        <td>
+                                            <span class="fw-medium text-dark">@log.GateName</span>
+                                            <div class="text-xs">
+                                                @if (log.Direction == "Entry")
+                                                {
+                                                    <span class="text-success"><i class="fa-solid fa-right-to-bracket fa-xs me-1"></i> ENTRY</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-warning"><i class="fa-solid fa-right-from-bracket fa-xs me-1"></i> EXIT</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(log.VehicleNumber))
+                                            {
+                                                <span class="badge bg-dark rounded-pill px-2.5 text-uppercase fw-bold">@log.VehicleNumber</span>
+                                                <div class="text-xs text-muted">Tag: @log.RfidTag</div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Visitor / Unregistered</span>
+                                                <div class="text-xs text-muted">Tag: @log.RfidTag</div>
+                                            }
+                                         
+                                        </td>
+                                        <td>
+                                            @if (log.SlotId.HasValue)
+                                            {
+                                                <span class="fw-semibold text-dark">@log.FlatDisplay</span>
+                                                <div class="text-xs text-muted">@log.OwnerName</div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (isAuth)
+                                            {
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-2.5 py-1">Granted</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle rounded-pill px-2.5 py-1">Denied</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function populateRfidTag() {
+            var val = document.getElementById("vehicleSelector").value;
+            document.getElementById("rfidTag").value = val;
+        }
+
+        function triggerRfidSweep() {
+            var rfidTag = document.getElementById("rfidTag").value;
+            var direction = document.getElementById("direction").value;
+            var gateName = document.getElementById("gateName").value;
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            $("#btnSweep").prop("disabled", true).html('<i class="fa-solid fa-circle-notch fa-spin me-1"></i> Swiping RFID...');
+
+            $.ajax({
+                url: '/IoT/SimulateRfidSweep',
+                type: 'POST',
+                data: {
+                    rfidTag: rfidTag,
+                    direction: direction,
+                    gateName: gateName,
+                    __RequestVerificationToken: token
+                },
+                success: function (res) {
+                    $("#btnSweep").prop("disabled", false).html('<i class="fa-solid fa-circle-right me-1"></i> Scan / Sweep RFID Sticker');
+                    
+                    if (res.success) {
+                        if (res.openGate) {
+                            animateGate(true);
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Access Granted',
+                                text: res.message,
+                                toast: true,
+                                position: 'top-end',
+                                timer: 4000,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            animateGate(false);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Access Denied',
+                                text: res.message,
+                                toast: true,
+                                position: 'top-end',
+                                timer: 4000,
+                                showConfirmButton: false
+                            });
+                        }
+                        prependLog(res.log);
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: res.message
+                        });
+                    }
+                },
+                error: function () {
+                    $("#btnSweep").prop("disabled", false).html('<i class="fa-solid fa-circle-right me-1"></i> Scan / Sweep RFID Sticker');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Server Error',
+                        text: 'An unexpected connection error occurred.'
+                    });
+                }
+            });
+        }
+
+        var gateTimeout;
+        function animateGate(authorized) {
+            clearTimeout(gateTimeout);
+            
+            var textEl = document.getElementById("barrierText");
+            var armEl = document.getElementById("gateArm");
+
+            if (authorized) {
+                textEl.innerText = "OPENED (AUTO-CLOSE IN 5S)";
+                textEl.className = "fs-4 fw-bold text-success mb-3";
+                armEl.style.transform = "rotate(-90deg)"; // Raise barrier arm
+
+                gateTimeout = setTimeout(function () {
+                    textEl.innerText = "CLOSED";
+                    textEl.className = "fs-4 fw-bold text-danger mb-3";
+                    armEl.style.transform = "rotate(0deg)"; // Lower barrier arm
+                }, 5000);
+            } else {
+                textEl.innerText = "ACCESS DENIED - LOCKED";
+                textEl.className = "fs-4 fw-bold text-danger mb-3";
+                armEl.style.transform = "rotate(0deg)";
+                
+                // Shake effect for visual feedback
+                armEl.classList.add("gate-shake");
+                setTimeout(function () {
+                    armEl.classList.remove("gate-shake");
+                }, 1000);
+            }
+        }
+
+        function prependLog(log) {
+            // Remove no logs row if it exists
+            $("#noLogsRow").remove();
+
+            var isAuth = log.status.indexOf("Authorized") >= 0;
+            var time = new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            var badgeDir = log.direction === "Entry" 
+                ? '<span class="text-success"><i class="fa-solid fa-right-to-bracket fa-xs me-1"></i> ENTRY</span>'
+                : '<span class="text-warning"><i class="fa-solid fa-right-from-bracket fa-xs me-1"></i> EXIT</span>';
+
+            var vehicle = log.vehicleNumber 
+                ? '<span class="badge bg-dark rounded-pill px-2.5 text-uppercase fw-bold">' + log.vehicleNumber + '</span><div class="text-xs text-muted">Tag: ' + log.rfidTag + '</div>'
+                : '<span class="text-muted">Visitor / Unregistered</span><div class="text-xs text-muted">Tag: ' + log.rfidTag + '</div>';
+
+            var flatInfo = log.slotId 
+                ? '<span class="fw-semibold text-dark">' + log.blockName + '-' + log.flatNumber + '</span><div class="text-xs text-muted">' + log.ownerName + '</div>'
+                : '<span class="text-muted">-</span>';
+
+            var badgeStatus = isAuth 
+                ? '<span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-2.5 py-1">Granted</span>'
+                : '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle rounded-pill px-2.5 py-1">Denied</span>';
+
+            var row = '<tr>' +
+                '<td>' + time + '</td>' +
+                '<td><span class="fw-medium text-dark">' + log.gateName + '</span><div class="text-xs">' + badgeDir + '</div></td>' +
+                '<td>' + vehicle + '</td>' +
+                '<td>' + flatInfo + '</td>' +
+                '<td class="text-center">' + badgeStatus + '</td>' +
+                '</tr>';
+
+            $("#logsBody").prepend(row);
+        }
+
+        function refreshLogs() {
+            $.getJSON('/IoT/GetRecentGateLogs', function (res) {
+                if (res.success) {
+                    $("#logsBody").empty();
+                    if (res.logs.length === 0) {
+                        var row = '<tr id="noLogsRow"><td colspan="5" class="text-center py-4 text-muted"><i class="fa-solid fa-folder-open fa-3x mb-3 text-secondary opacity-50 d-block"></i>No entry/exit logs recorded today.</td></tr>';
+                        $("#logsBody").append(row);
+                    } else {
+                        $.each(res.logs, function (i, log) {
+                            var isAuth = log.status.indexOf("Authorized") >= 0;
+                            var dateObj = new Date(log.timestamp);
+                            var time = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                            var badgeDir = log.direction === "Entry" 
+                                ? '<span class="text-success"><i class="fa-solid fa-right-to-bracket fa-xs me-1"></i> ENTRY</span>'
+                                : '<span class="text-warning"><i class="fa-solid fa-right-from-bracket fa-xs me-1"></i> EXIT</span>';
+
+                            var vehicle = log.vehicleNumber 
+                                ? '<span class="badge bg-dark rounded-pill px-2.5 text-uppercase fw-bold">' + log.vehicleNumber + '</span><div class="text-xs text-muted">Tag: ' + log.rfidTag + '</div>'
+                                : '<span class="text-muted">Visitor / Unregistered</span><div class="text-xs text-muted">Tag: ' + log.rfidTag + '</div>';
+
+                            var flatInfo = log.slotId 
+                                ? '<span class="fw-semibold text-dark">' + log.blockName + '-' + log.flatNumber + '</span><div class="text-xs text-muted">' + log.ownerName + '</div>'
+                                : '<span class="text-muted">-</span>';
+
+                            var badgeStatus = isAuth 
+                                ? '<span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-2.5 py-1">Granted</span>'
+                                : '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle rounded-pill px-2.5 py-1">Denied</span>';
+
+                            var row = '<tr>' +
+                                '<td>' + time + '</td>' +
+                                '<td><span class="fw-medium text-dark">' + log.gateName + '</span><div class="text-xs">' + badgeDir + '</div></td>' +
+                                '<td>' + vehicle + '</td>' +
+                                '<td>' + flatInfo + '</td>' +
+                                '<td class="text-center">' + badgeStatus + '</td>' +
+                                '</tr>';
+                            $("#logsBody").append(row);
+                        });
+                    }
+                }
+            });
+        }
+    </script>
+    <style>
+        .gate-shake {
+            animation: shake 0.2s ease-in-out 0s 3 alternate;
+        }
+        @@keyframes shake {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(-3deg); }
+            100% { transform: rotate(3deg); }
+        }
+        .text-xs {
+            font-size: 0.72rem;
+        }
+    </style>
+}

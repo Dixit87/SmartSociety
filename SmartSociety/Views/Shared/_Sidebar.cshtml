@@ -1,6 +1,19 @@
 @using Microsoft.AspNetCore.Http
 @inject IHttpContextAccessor HttpContextAccessor
 
+@functions {
+    public string GetActiveCssClass(string controller, string action = null)
+    {
+        var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+        var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+
+        bool isSameController = string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase);
+        bool isSameAction = action == null || string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase);
+
+        return isSameController && isSameAction ? "active" : "text-white";
+    }
+}
+
 @{
     var role = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "Guest";
 }
@@ -15,70 +28,81 @@
 
         @if (role == "Admin")
         {
-            <li class="nav-item"><a asp-controller="Home" asp-action="Index" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
-            <li><a asp-controller="User" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-users-gear me-2"></i> User Management</a></li>
-            <li><a asp-controller="Flat" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-building-user me-2"></i> Resident & Flat Management</a></li>
-            <li><a asp-controller="Parking" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-car me-2"></i> Parking Management</a></li>
-            <li><a asp-controller="Visitor" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-door-open me-2"></i> Visitor Logs</a></li>
-            <li><a asp-controller="Maintenance" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-credit-card me-2"></i> Maintenance & Billing</a></li>
-            <li><a asp-controller="Utility" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-faucet-drip me-2"></i> Meter & Utility Management</a></li>
-            <li><a asp-controller="Finance" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-sack-dollar me-2"></i> Financial Accounts & Expenses</a></li>
-            <li><a asp-controller="Complaint" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-tower-observation me-2"></i> Complaint Helpdesk</a></li>
-            <li><a asp-controller="Amenity" asp-action="Index" class="nav-link text-white"><i class="fa-regular fa-calendar-check me-2"></i> Amenity & Facility Booking</a></li>
-            <li><a asp-controller="Staff" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-user-shield me-2"></i> Staff & Guard Control</a></li>
-            <li><a asp-controller="AssetVendor" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-toolbox me-2"></i> Assets & Vendor Management</a></li>
-            <li><a asp-controller="Notice" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-bullhorn me-2"></i> Notice Board</a></li>
-            <li><a asp-controller="Poll" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-check-to-slot me-2"></i> Polls & Voting</a></li>
-            <li><a asp-controller="Communication" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-envelope-open-text me-2"></i> Communication Center</a></li>
-            <li><a asp-controller="Document" asp-action="Index" class="nav-link text-white"><i class="fa-regular fa-folder-open me-2"></i> Document Management</a></li>
-            <li><a asp-controller="Report" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-chart-line me-2"></i> Reports & Analytics</a></li>
-            <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-magnifying-glass-chart me-2"></i> Audit Logs</a></li>
-            <li><a asp-controller="Setting" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-gears me-2"></i> System Settings & Backup</a></li>
+            <li class="nav-item"><a asp-controller="Home" asp-action="Index" class="nav-link @GetActiveCssClass("Home", "Index")"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
+            <li class="nav-item"><a asp-controller="User" asp-action="Index" class="nav-link @GetActiveCssClass("User")"><i class="fa-solid fa-users-gear me-2"></i> User Management</a></li>
+            <li class="nav-item"><a asp-controller="Flat" asp-action="Index" class="nav-link @GetActiveCssClass("Flat")"><i class="fa-solid fa-building-user me-2"></i> Resident & Flat Management</a></li>
+            <li class="nav-item"><a asp-controller="Parking" asp-action="Index" class="nav-link @GetActiveCssClass("Parking")"><i class="fa-solid fa-car me-2"></i> Parking Management</a></li>
+            <li class="nav-item"><a asp-controller="Visitor" asp-action="Index" class="nav-link @GetActiveCssClass("Visitor")"><i class="fa-solid fa-door-open me-2"></i> Visitor Logs</a></li>
+            <li class="nav-item"><a asp-controller="Maintenance" asp-action="Index" class="nav-link @GetActiveCssClass("Maintenance", "Index")"><i class="fa-solid fa-credit-card me-2"></i> Maintenance & Billing</a></li>
+            <li class="nav-item"><a asp-controller="Utility" asp-action="Index" class="nav-link @GetActiveCssClass("Utility", "Index")"><i class="fa-solid fa-faucet-drip me-2"></i> Meter & Utility Management</a></li>
+            <li class="nav-item"><a asp-controller="IoT" asp-action="AdminSmartMeters" class="nav-link @GetActiveCssClass("IoT", "AdminSmartMeters")"><i class="fa-solid fa-gauge-high me-2 text-warning"></i> Smart IoT Devices</a></li>
+            <li class="nav-item"><a asp-controller="Finance" asp-action="Index" class="nav-link @GetActiveCssClass("Finance", "Index")"><i class="fa-solid fa-sack-dollar me-2"></i> Financial Accounts & Expenses</a></li>
+            <li class="nav-item"><a asp-controller="Finance" asp-action="SinkingFund" class="nav-link @GetActiveCssClass("Finance", "SinkingFund")"><i class="fa-solid fa-piggy-bank me-2 text-primary"></i> Sinking Fund & FDs</a></li>
+            <li class="nav-item"><a asp-controller="Complaint" asp-action="Index" class="nav-link @GetActiveCssClass("Complaint")"><i class="fa-solid fa-tower-observation me-2"></i> Complaint Helpdesk</a></li>
+            <li class="nav-item"><a asp-controller="Amenity" asp-action="Index" class="nav-link @GetActiveCssClass("Amenity")"><i class="fa-regular fa-calendar-check me-2"></i> Amenity & Facility Booking</a></li>
+            <li class="nav-item"><a asp-controller="Staff" asp-action="Index" class="nav-link @GetActiveCssClass("Staff")"><i class="fa-solid fa-user-shield me-2"></i> Staff & Guard Control</a></li>
+            <li class="nav-item"><a asp-controller="AssetVendor" asp-action="Index" class="nav-link @GetActiveCssClass("AssetVendor")"><i class="fa-solid fa-toolbox me-2"></i> Assets & Vendor Management</a></li>
+            <li class="nav-item"><a asp-controller="Notice" asp-action="Index" class="nav-link @GetActiveCssClass("Notice")"><i class="fa-solid fa-bullhorn me-2"></i> Notice Board</a></li>
+            <li class="nav-item"><a asp-controller="Poll" asp-action="Index" class="nav-link @GetActiveCssClass("Poll")"><i class="fa-solid fa-check-to-slot me-2"></i> Polls & Voting</a></li>
+            <li class="nav-item"><a asp-controller="Communication" asp-action="Index" class="nav-link @GetActiveCssClass("Communication")"><i class="fa-solid fa-envelope-open-text me-2"></i> Communication Center</a></li>
+            <li class="nav-item"><a asp-controller="Document" asp-action="Index" class="nav-link @GetActiveCssClass("Document")"><i class="fa-regular fa-folder-open me-2"></i> Document Management</a></li>
+            <li class="nav-item"><a asp-controller="Report" asp-action="Index" class="nav-link @GetActiveCssClass("Report")"><i class="fa-solid fa-chart-line me-2"></i> Reports & Analytics</a></li>
+            <li class="nav-item"><a asp-controller="AuditLog" asp-action="Index" class="nav-link @GetActiveCssClass("AuditLog")"><i class="fa-solid fa-magnifying-glass-chart me-2"></i> Audit Logs</a></li>
+            <li class="nav-item"><a asp-controller="Setting" asp-action="Index" class="nav-link @GetActiveCssClass("Setting")"><i class="fa-solid fa-gears me-2"></i> System Settings & Backup</a></li>
         }
         else if (role == "Resident")
         {
-            <li class="nav-item"><a href="#" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-credit-card me-2"></i> My Maintenance & Bills</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-faucet me-2"></i> Utility Usage Tracker</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-headset me-2"></i> Helpdesk & Complaints</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-car-side me-2"></i> My Visitors Log</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-regular fa-calendar-plus me-2"></i> Amenity Booking</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-bullhorn me-2"></i> Notice Board & Voting</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-regular fa-folder me-2"></i> My Documents</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-bell me-2"></i> Notifications</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-user-gear me-2"></i> Profile & Family Settings</a></li>
+            <li class="nav-item"><a asp-controller="Home" asp-action="Index" class="nav-link @GetActiveCssClass("Home", "Index")"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
+            <li class="nav-item"><a asp-controller="Maintenance" asp-action="MyBills" class="nav-link @GetActiveCssClass("Maintenance", "MyBills")"><i class="fa-solid fa-credit-card me-2"></i> My Maintenance & Bills</a></li>
+            <li class="nav-item"><a asp-controller="Utility" asp-action="MyUsage" class="nav-link @GetActiveCssClass("Utility", "MyUsage")"><i class="fa-solid fa-faucet me-2"></i> Utility Usage Tracker</a></li>
+            <li class="nav-item"><a asp-controller="IoT" asp-action="MySmartMeters" class="nav-link @GetActiveCssClass("IoT", "MySmartMeters")"><i class="fa-solid fa-bolt-lightning me-2 text-warning"></i> Prepaid Smart Meters</a></li>
+            <li class="nav-item"><a asp-controller="IoT" asp-action="MyParkingLogs" class="nav-link @GetActiveCssClass("IoT", "MyParkingLogs")"><i class="fa-solid fa-square-parking me-2 text-primary"></i> My Vehicles & RFID Logs</a></li>
+            <li class="nav-item"><a asp-controller="Complaint" asp-action="MyComplaints" class="nav-link @GetActiveCssClass("Complaint", "MyComplaints")"><i class="fa-solid fa-headset me-2"></i> Helpdesk & Complaints</a></li>
+            <li class="nav-item"><a asp-controller="Visitor" asp-action="MyVisitors" class="nav-link @GetActiveCssClass("Visitor", "MyVisitors")"><i class="fa-solid fa-car-side me-2"></i> My Visitors Log</a></li>
+            <li class="nav-item"><a asp-controller="Amenity" asp-action="MyBookings" class="nav-link @GetActiveCssClass("Amenity", "MyBookings")"><i class="fa-regular fa-calendar-plus me-2"></i> Amenity Booking</a></li>
+            <li class="nav-item"><a asp-controller="Notice" asp-action="Board" class="nav-link @GetActiveCssClass("Notice", "Board")"><i class="fa-solid fa-bullhorn me-2"></i> Notice Board & Voting</a></li>
+            <li class="nav-item"><a asp-controller="Document" asp-action="MyDocuments" class="nav-link @GetActiveCssClass("Document", "MyDocuments")"><i class="fa-regular fa-folder me-2"></i> My Documents</a></li>
+            <li class="nav-item">
+                <a asp-controller="Notification" asp-action="Index" class="nav-link @GetActiveCssClass("Notification") d-flex align-items-center justify-content-between">
+                    <span><i class="fa-solid fa-bell me-2"></i> Notifications</span>
+                    <span id="sidebar-notification-badge" class="badge rounded-pill bg-danger" style="display: none; font-size: 0.75rem; padding: 0.25em 0.6em;">0</span>
+                </a>
+            </li>
+            <li class="nav-item"><a asp-controller="Classifieds" asp-action="Index" class="nav-link @GetActiveCssClass("Classifieds")"><i class="fa-solid fa-store me-2 text-warning"></i> Society Bazaar</a></li>
+            <li class="nav-item"><a asp-controller="Forum" asp-action="Index" class="nav-link @GetActiveCssClass("Forum")"><i class="fa-solid fa-comments me-2 text-info"></i> Discussion Forum</a></li>
+            <li class="nav-item"><a asp-controller="Staff" asp-action="HelperDirectory" class="nav-link @GetActiveCssClass("Staff", "HelperDirectory")"><i class="fa-solid fa-user-shield me-2 text-success"></i> Helper Directory</a></li>
+            <li class="nav-item"><a asp-controller="Profile" asp-action="Index" class="nav-link @GetActiveCssClass("Profile")"><i class="fa-solid fa-user-gear me-2"></i> Profile & Family Settings</a></li>
         }
         else if (role == "Guard")
         {
-            <li class="nav-item"><a href="#" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-person-walking-arrow-right me-2"></i> Visitor Entry</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-person-walking-dashed-line-arrow-right me-2"></i> Visitor Exit</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-box me-2"></i> Delivery Management</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-clipboard-list me-2"></i> Visitor Logs</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-address-book me-2"></i> Resident Directory</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-triangle-exclamation text-danger me-2"></i> Emergency Alerts</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-id-badge me-2"></i> My Profile</a></li>
+            <li class="nav-item"><a asp-controller="Home" asp-action="Index" class="nav-link @GetActiveCssClass("Home", "Index")"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
+            <li class="nav-item"><a asp-controller="Visitor" asp-action="Index" class="nav-link @GetActiveCssClass("Visitor", "Index")"><i class="fa-solid fa-clipboard-list me-2"></i> Visitor Entry & Logs</a></li>
+            <li class="nav-item"><a asp-controller="IoT" asp-action="GuardRfidConsole" class="nav-link @GetActiveCssClass("IoT", "GuardRfidConsole")"><i class="fa-solid fa-car-tunnel me-2 text-info"></i> RFID Gate Console</a></li>
+            <li class="nav-item"><a asp-controller="Visitor" asp-action="Directory" class="nav-link @GetActiveCssClass("Visitor", "Directory")"><i class="fa-solid fa-address-book me-2"></i> Resident Directory</a></li>
+            <li class="nav-item"><a href="#" class="nav-link text-white" onclick="triggerSidebarEmergency()"><i class="fa-solid fa-triangle-exclamation text-danger me-2"></i> Emergency Alerts</a></li>
+            <li class="nav-item"><a asp-controller="Profile" asp-action="Index" class="nav-link @GetActiveCssClass("Profile")"><i class="fa-solid fa-id-badge me-2"></i> My Profile</a></li>
         }
         else if (role == "Accountant")
         {
-            <li class="nav-item"><a href="#" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
-            <li><a asp-controller="Maintenance" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-file-invoice-dollar me-2"></i> Maintenance & Billing</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-hand-holding-dollar me-2"></i> Payment Collection</a></li>
-            <li><a asp-controller="Utility" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-file-invoice me-2"></i> Utility Billing</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-money-bill-transfer me-2"></i> Expenses Management</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-chart-column me-2"></i> Financial Reports</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-file-pdf me-2"></i> Financial Documents</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-id-card me-2"></i> My Profile</a></li>
+            <li class="nav-item"><a asp-controller="Finance" asp-action="Index" class="nav-link @GetActiveCssClass("Finance", "Index")"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
+            <li class="nav-item"><a asp-controller="Finance" asp-action="SinkingFund" class="nav-link @GetActiveCssClass("Finance", "SinkingFund")"><i class="fa-solid fa-piggy-bank me-2 text-primary"></i> Sinking Fund & FDs</a></li>
+            <li class="nav-item"><a asp-controller="Maintenance" asp-action="Index" class="nav-link @GetActiveCssClass("Maintenance", "Index")"><i class="fa-solid fa-file-invoice-dollar me-2"></i> Maintenance Billing</a></li>
+            <li class="nav-item"><a asp-controller="Maintenance" asp-action="Index" class="nav-link @GetActiveCssClass("Maintenance", "Index")"><i class="fa-solid fa-hand-holding-dollar me-2"></i> Record Payments</a></li>
+            <li class="nav-item"><a asp-controller="Utility" asp-action="Index" class="nav-link @GetActiveCssClass("Utility", "Index")"><i class="fa-solid fa-file-invoice me-2"></i> Utility Billing</a></li>
+            <li class="nav-item"><a asp-controller="Finance" asp-action="Index" class="nav-link @GetActiveCssClass("Finance", "Index")"><i class="fa-solid fa-money-bill-transfer me-2"></i> Expenses Log</a></li>
+            <li class="nav-item"><a asp-controller="Report" asp-action="Index" class="nav-link @GetActiveCssClass("Report", "Index")"><i class="fa-solid fa-chart-column me-2"></i> Financial Reports</a></li>
+            <li class="nav-item"><a asp-controller="Document" asp-action="Index" class="nav-link @GetActiveCssClass("Document", "Index")"><i class="fa-solid fa-file-pdf me-2"></i> Financial Documents</a></li>
+            <li class="nav-item"><a asp-controller="Profile" asp-action="In  ex" class="nav-link @GetActiveCssClass("Profile")"><i class="fa-solid fa-id-card me-2"></i> My Profile</a></li>
         }
         else if (role == "Technician")
         {
-            <li class="nav-item"><a href="#" class="nav-link active"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-screwdriver-wrench me-2"></i> Assigned Complaints</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-list-check me-2"></i> Work Progress</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-clipboard-check me-2"></i> Daily Tasks</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-triangle-exclamation me-2"></i> Asset Service Requests</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-clock-rotate-left me-2"></i> Work History</a></li>
-            <li><a href="#" class="nav-link text-white"><i class="fa-solid fa-id-card me-2"></i> My Profile</a></li>
+            <li class="nav-item"><a asp-controller="Home" asp-action="Index" class="nav-link @GetActiveCssClass("Home", "Index")"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a></li>
+            <li class="nav-item"><a href="/Home/Index?filter=assigned" class="nav-link text-white"><i class="fa-solid fa-screwdriver-wrench me-2"></i> Assigned Complaints</a></li>
+            <li class="nav-item"><a href="/Home/Index?filter=progress" class="nav-link text-white"><i class="fa-solid fa-list-check me-2"></i> Work Progress</a></li>
+            <li class="nav-item"><a asp-controller="Home" asp-action="Index" class="nav-link text-white"><i class="fa-solid fa-clipboard-check me-2"></i> Daily Tasks</a></li>
+            <li class="nav-item"><a asp-controller="AssetVendor" asp-action="Index" class="nav-link @GetActiveCssClass("AssetVendor")"><i class="fa-solid fa-triangle-exclamation me-2"></i> Asset Service Logs</a></li>
+            <li class="nav-item"><a href="/Home/Index?filter=history" class="nav-link text-white"><i class="fa-solid fa-clock-rotate-left me-2"></i> Work History</a></li>
+            <li class="nav-item"><a asp-controller="Profile" asp-action="Index" class="nav-link @GetActiveCssClass("Profile")"><i class="fa-solid fa-id-card me-2"></i> My Profile</a></li>
         }
     </ul>
 
@@ -89,10 +113,49 @@
             <strong>@role</strong>
         </a>
         <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
-            <li><a class="dropdown-item" href="#">Settings</a></li>
-            <li><a class="dropdown-item" href="#">Profile</a></li>
+            <li><a class="dropdown-item" href="/Profile"><i class="fa-solid fa-user-gear me-2 text-muted"></i> Profile & Family</a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="#">Sign out</a></li>
+            <li>
+                <form asp-controller="Auth" asp-action="Logout" method="post" class="d-inline">
+                    <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Sign out</button>
+                </form>
+            </li>
         </ul>
     </div>
 </div>
+
+<script>
+    function triggerSidebarEmergency() {
+        if (typeof openEmergencyModal === 'function') {
+            openEmergencyModal();
+        } else {
+            window.location.href = '/Home/Index?triggerEmergency=true';
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        function checkUnreadNotifications() {
+            fetch('/Notification/GetUnreadCount')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const badge = document.getElementById('sidebar-notification-badge');
+                        if (badge) {
+                            if (data.count > 0) {
+                                badge.textContent = data.count;
+                                badge.style.display = 'inline-block';
+                            } else {
+                                badge.style.display = 'none';
+                            }
+                        }
+                    }
+                })
+                .catch(err => console.error("Error fetching notification count:", err));
+        }
+
+        // Run on load
+        checkUnreadNotifications();
+        // Periodically poll every 30 seconds
+        setInterval(checkUnreadNotifications, 30000);
+    });
+</script>

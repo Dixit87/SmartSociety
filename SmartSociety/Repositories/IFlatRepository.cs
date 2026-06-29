@@ -1,4 +1,6 @@
 using SmartSociety.Models;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace SmartSociety.Repositories
 {
@@ -8,5 +10,6 @@ namespace SmartSociety.Repositories
         Task<Flat?> GetFlatByIdAsync(int flatId);
         Task<int> UpsertFlatAsync(Flat flat);
         Task DeleteFlatAsync(int flatId);
+        Task<Flat?> GetFlatByUserIdAsync(int userId);
     }
 }

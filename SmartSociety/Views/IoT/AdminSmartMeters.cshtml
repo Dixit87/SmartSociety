@@ -1,0 +1,361 @@
+@model IEnumerable<SmartSociety.Models.SmartMeter>
+@{
+    ViewData["Title"] = "Prepaid Smart Meter Control";
+    var flats = ViewBag.Flats as IEnumerable<SmartSociety.Models.Flat> ?? new List<SmartSociety.Models.Flat>();
+    
+    var totalMeters = Model.Count();
+    var activeMeters = Model.Count(m => m.Status == "Active");
+    var suspendedMeters = Model.Count(m => m.Status == "Suspended");
+    var lowBalanceMeters = Model.Count(m => m.Balance < 150 && m.Balance > 0);
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-dark fw-bold"><i class="fa-solid fa-gauge-high text-primary me-2"></i> Prepaid Smart Meter Control</h1>
+            <p class="text-muted small mb-0">Provision and manage prepaid smart meters for electricity and water. Simulate usage readings.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary rounded-pill px-3" onclick="simulateConsumption()">
+                <i class="fa-solid fa-rotate me-1"></i> Simulate Consumption
+            </button>
+            <button class="btn btn-primary rounded-pill px-4 fw-semibold" onclick="openAddMeterModal()">
+                <i class="fa-solid fa-plus me-1"></i> Add Smart Meter
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 rounded-4 shadow-sm p-3 bg-white h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold">Total Devices</span>
+                        <h3 class="fw-bold text-dark mt-1 mb-0">@totalMeters</h3>
+                    </div>
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3">
+                        <i class="fa-solid fa-network-wired fa-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 rounded-4 shadow-sm p-3 bg-white h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold">Active Meters</span>
+                        <h3 class="fw-bold text-success mt-1 mb-0">@activeMeters</h3>
+                    </div>
+                    <div class="bg-success bg-opacity-10 text-success rounded-circle p-3">
+                        <i class="fa-solid fa-circle-check fa-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 rounded-4 shadow-sm p-3 bg-white h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold">Suspended (0 Bal)</span>
+                        <h3 class="fw-bold text-danger mt-1 mb-0">@suspendedMeters</h3>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3">
+                        <i class="fa-solid fa-triangle-exclamation fa-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 rounded-4 shadow-sm p-3 bg-white h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold">Low Balance (&lt; ₹150)</span>
+                        <h3 class="fw-bold text-warning mt-1 mb-0">@lowBalanceMeters</h3>
+                    </div>
+                    <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3">
+                        <i class="fa-solid fa-battery-quarter fa-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Data Table Card -->
+    <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+        <h5 class="fw-bold text-dark mb-4"><i class="fa-solid fa-microchip text-muted me-1.5"></i> Connected Smart Meters</h5>
+        
+        <div class="table-responsive">
+            <table class="table table-hover align-middle border-0" id="smartMetersTable">
+                <thead class="bg-light text-muted small">
+                    <tr>
+                        <th class="border-0">Flat</th>
+                        <th class="border-0">Owner</th>
+                        <th class="border-0">Meter details</th>
+                        <th class="border-0">Type</th>
+                        <th class="border-0 text-end">Prepaid Balance</th>
+                        <th class="border-0 text-end">Current Reading</th>
+                        <th class="border-0">Last Synced</th>
+                        <th class="border-0 text-center">Status</th>
+                        <th class="border-0 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="small text-secondary">
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-circle-nodes fa-4x mb-3 text-secondary opacity-50 d-block"></i>
+                                No Smart prepaid meters registered yet. Click "Add Smart Meter" to assign one.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var m in Model)
+                        {
+                            var balClass = "text-dark";
+                            if (m.Balance <= 0) balClass = "text-danger fw-bold";
+                            else if (m.Balance < 150) balClass = "text-warning fw-bold";
+                            
+                            var statusClass = m.Status == "Active" ? "bg-success bg-opacity-10 text-success" : "bg-danger bg-opacity-10 text-danger";
+                            
+                            <tr>
+                                <td class="fw-bold text-dark">@m.BlockName - @m.FlatNumber</td>
+                                <td>@m.OwnerName</td>
+                                <td class="fw-medium">@m.MeterNumber</td>
+                                <td>
+                                    @if (string.Equals(m.MeterType, "Electricity", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill border border-warning-subtle"><i class="fa-solid fa-bolt me-1"></i> Electricity</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info bg-opacity-10 text-info rounded-pill border border-info-subtle"><i class="fa-solid fa-droplet me-1"></i> Water</span>
+                                    }
+                                </td>
+                                <td class="text-end @balClass">₹@m.Balance.ToString("0.00")</td>
+                                <td class="text-end fw-semibold">@m.CurrentReading.ToString("0.00") @m.MeasurementUnit</td>
+                                <td>@m.LastSyncTime.ToString("dd MMM yyyy, hh:mm tt")</td>
+                                <td class="text-center">
+                                    <span class="badge @statusClass rounded-pill px-2.5 py-1">@m.Status</span>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1" 
+                                            onclick="openEditMeterModal(@m.MeterId, @m.FlatId, '@m.MeterType', '@m.MeterNumber', @m.Balance, @m.CurrentReading, '@m.Status', @(m.IsActive ? "true" : "false") )">
+                                        <i class="fa-solid fa-pencil"></i> Edit
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Meter Modal -->
+<div class="modal fade" id="meterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark" id="modalTitle">Configure Smart Meter</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="meterForm" onsubmit="event.preventDefault(); submitMeterForm();">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="MeterId" name="MeterId" value="0" />
+                
+                <div class="modal-body p-4 bg-white">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted mb-1">Assign Flat <span class="text-danger">*</span></label>
+                        <select class="form-select bg-light border-0 rounded-3" id="FlatId" name="FlatId" required>
+                            <option value="">-- Choose Flat --</option>
+                            @foreach (var f in flats)
+                            {
+                                <option value="@f.FlatId">@f.BlockName - @f.FlatNumber (@(f.OwnerName ?? "No Owner"))</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted mb-1">Meter Type <span class="text-danger">*</span></label>
+                            <select class="form-select bg-light border-0 rounded-3" id="MeterType" name="MeterType" required>
+                                <option value="Electricity">Electricity</option>
+                                <option value="Water">Water</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted mb-1">Meter Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control bg-light border-0 rounded-3" id="MeterNumber" name="MeterNumber" placeholder="E.g. ELEC-101" required />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted mb-1">Initial Balance (₹)</label>
+                            <input type="number" step="0.01" class="form-control bg-light border-0 rounded-3" id="Balance" name="Balance" value="500.00" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted mb-1">Initial Reading</label>
+                            <input type="number" step="0.01" class="form-control bg-light border-0 rounded-3" id="CurrentReading" name="CurrentReading" value="0.00" required />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted mb-1">Status</label>
+                            <select class="form-select bg-light border-0 rounded-3" id="Status" name="Status" required>
+                                <option value="Active">Active</option>
+                                <option value="Suspended">Suspended</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="IsActive" name="IsActive" checked value="true" />
+                                <label class="form-check-label small fw-semibold text-muted" for="IsActive">
+                                    Device Enabled
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-top bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold" id="btnSubmit">Save Configuration</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        var meterModal;
+
+        $(document).ready(function() {
+            meterModal = new bootstrap.Modal(document.getElementById('meterModal'));
+        });
+
+        function openAddMeterModal() {
+            document.getElementById("meterForm").reset();
+            document.getElementById("MeterId").value = "0";
+            document.getElementById("modalTitle").innerText = "Configure Smart Meter";
+            document.getElementById("FlatId").disabled = false;
+            meterModal.show();
+        }
+
+        function openEditMeterModal(id, flatId, type, number, balance, reading, status, isActive) {
+            document.getElementById("MeterId").value = id;
+            document.getElementById("FlatId").value = flatId;
+            document.getElementById("FlatId").disabled = true; // Flat can't be changed after creation
+            document.getElementById("MeterType").value = type;
+            document.getElementById("MeterNumber").value = number;
+            document.getElementById("Balance").value = balance;
+            document.getElementById("CurrentReading").value = reading;
+            document.getElementById("Status").value = status;
+            document.getElementById("IsActive").checked = isActive;
+            document.getElementById("modalTitle").innerText = "Edit Meter Details: " + number;
+            meterModal.show();
+        }
+
+        function submitMeterForm() {
+            // FlatId is disabled during edit, so we need to enable it momentarily to serialize it or append it
+            var flatEl = document.getElementById("FlatId");
+            var flatVal = flatEl.value;
+            flatEl.disabled = false;
+
+            var formData = $("#meterForm").serialize();
+            flatEl.disabled = document.getElementById("MeterId").value !== "0"; // Restore state
+
+            $("#btnSubmit").prop("disabled", true).text("Saving...");
+
+            $.ajax({
+                url: '/IoT/CreateOrUpdateMeter',
+                type: 'POST',
+                data: formData,
+                success: function(res) {
+                    $("#btnSubmit").prop("disabled", false).text("Save Configuration");
+                    if (res.success) {
+                        meterModal.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: res.message
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Failed',
+                            text: res.message
+                        });
+                    }
+                },
+                error: function() {
+                    $("#btnSubmit").prop("disabled", false).text("Save Configuration");
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'An unexpected connection error occurred.'
+                    });
+                }
+            });
+        }
+
+        function simulateConsumption() {
+            Swal.fire({
+                title: 'Simulate Reading Sync',
+                text: 'This will simulate random usage of Water & Electricity across all registered flats and automatically deduct balance. Proceed?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, Sync IoT Readings'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.showLoading();
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+
+                    $.ajax({
+                        url: '/IoT/SimulateConsumption',
+                        type: 'POST',
+                        data: {
+                            __RequestVerificationToken: token
+                        },
+                        success: function(res) {
+                            if (res.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Sync Complete',
+                                    text: res.message
+                                }).then(() => {
+                                    window.location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Sync Failed',
+                                    text: res.message
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'An unexpected error occurred during sync.'
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}

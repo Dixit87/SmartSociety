@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using ClosedXML.Excel;
 using SmartSociety.Models;
 using SmartSociety.Repositories;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartSociety.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class ParkingController : Controller
     {
         private readonly IParkingRepository _parkingRepo;

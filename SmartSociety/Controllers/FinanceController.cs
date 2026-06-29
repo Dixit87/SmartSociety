@@ -7,9 +7,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SmartSociety.Models;
 using SmartSociety.Repositories;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartSociety.Controllers
 {
+    [Authorize(Roles = "Admin,Accountant")]
     public class FinanceController : Controller
     {
         private readonly IFinanceRepository _financeRepo;
@@ -54,6 +56,14 @@ namespace SmartSociety.Controllers
                 string receiptUrl = null;
                 if (receipt != null && receipt.Length > 0)
                 {
+                    // Security: Validate file extension
+                    var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+                    var extension = Path.GetExtension(receipt.FileName).ToLower();
+                    if (!allowedExtensions.Contains(extension))
+                    {
+                        return Json(new { success = false, message = "Only PDF and image files (.pdf, .jpg, .jpeg, .png) are allowed for receipt." });
+                    }
+
                     string uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "receipts");
                     if (!Directory.Exists(uploadsFolder))
                         Directory.CreateDirectory(uploadsFolder);
@@ -142,6 +152,14 @@ namespace SmartSociety.Controllers
                 string receiptUrl = null;
                 if (receipt != null && receipt.Length > 0)
                 {
+                    // Security: Validate file extension
+                    var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+                    var extension = Path.GetExtension(receipt.FileName).ToLower();
+                    if (!allowedExtensions.Contains(extension))
+                    {
+                        return Json(new { success = false, message = "Only PDF and image files (.pdf, .jpg, .jpeg, .png) are allowed for receipt." });
+                    }
+
                     string uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "receipts");
                     if (!Directory.Exists(uploadsFolder))
                         Directory.CreateDirectory(uploadsFolder);
@@ -218,6 +236,78 @@ namespace SmartSociety.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, message = "Failed to delete income: " + ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SinkingFund()
+        {
+            var fds = await _financeRepo.GetFixedDepositsAsync();
+            var txns = await _financeRepo.GetSinkingFundTransactionsAsync();
+            var balance = await _financeRepo.GetSinkingFundBalanceAsync();
+
+            dynamic model = new ExpandoObject();
+            model.FixedDeposits = fds;
+            model.Transactions = txns;
+            model.SinkingFundBalance = balance;
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddFixedDeposit(FixedDeposit fd)
+        {
+            try
+            {
+                if (ModelState.IsValid)
+                {
+                    await _financeRepo.CreateFixedDepositAsync(fd);
+                    return Json(new { success = true, message = "Fixed Deposit created successfully." });
+                }
+                return Json(new { success = false, message = "Invalid data model." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Failed to create Fixed Deposit: " + ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateFdStatus(int fdId, string status)
+        {
+            try
+            {
+                await _financeRepo.UpdateFixedDepositStatusAsync(fdId, status);
+                return Json(new { success = true, message = $"Fixed Deposit status updated to {status}." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Failed to update Fixed Deposit status: " + ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RecordSinkingFundTransaction(string type, decimal amount, string purpose, string? referenceId)
+        {
+            try
+            {
+                var txn = new SinkingFundTransaction
+                {
+                    Type = type,
+                    Amount = amount,
+                    Purpose = purpose,
+                    ReferenceId = referenceId,
+                    TransactionDate = DateTime.Now
+                };
+                await _financeRepo.CreateSinkingFundTransactionAsync(txn);
+                return Json(new { success = true, message = "Sinking Fund transaction recorded successfully." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Failed to record Sinking Fund transaction: " + ex.Message });
             }
         }
     }

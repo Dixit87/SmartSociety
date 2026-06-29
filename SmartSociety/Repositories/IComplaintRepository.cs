@@ -12,6 +12,7 @@ namespace SmartSociety.Repositories
         Task UpdateStatusAsync(int complaintId, string status, string adminRemarks = null);
         Task AssignAsync(int complaintId, int assignedTo);
         Task<ComplaintDashboardStats> GetDashboardStatsAsync();
+        Task<IEnumerable<Complaint>> GetByFlatIdAsync(int flatId);
         Task UpdateAsync(Complaint complaint);
         Task DeleteAsync(int complaintId);
     }

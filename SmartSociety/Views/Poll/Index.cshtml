@@ -1,9 +1,9 @@
 @model IEnumerable<SmartSociety.Models.Poll>
 
 @{
-    ViewData["Title"] = "Polls & Voting";
-    var activePolls = Model.Where(p => p.Status == "Active").ToList();
-    var closedPolls = Model.Where(p => p.Status == "Closed").ToList();
+ViewData["Title"] = "Polls & Voting";
+var activePolls = Model.Where(p => p.Status == "Active").ToList();
+var closedPolls = Model.Where(p => p.Status == "Closed").ToList();
 }
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
@@ -109,20 +109,20 @@
                         <td class="py-3 text-end">
                             <div class="btn-group shadow-sm">
                                 <button type="button" class="btn btn-light btn-sm text-primary" title="View Results"
-                                        onclick="viewResults(@p.PollId, '@Uri.EscapeDataString(p.Question)')">
-                                    <i class="fa-solid fa-chart-pie"></i>
-                                </button>
-                                <button type="button" class="btn btn-light btn-sm text-danger" title="Delete Poll" 
-                                        onclick="deletePoll(@p.PollId)">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+                                onclick="viewResults(@p.PollId, '@Uri.EscapeDataString(p.Question)')">
+                                <i class="fa-solid fa-chart-pie"></i>
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm text-danger" title="Delete Poll"
+                            onclick="deletePoll(@p.PollId)">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+</div>
 </div>
 
 <!-- Create Poll Modal -->
@@ -155,11 +155,11 @@
                             <i class="fa-solid fa-plus"></i> Add Option
                         </button>
                     </div>
-                    
+
                     <div id="optionsContainer" class="option-list px-2 py-2">
                         <!-- Options will be appended here -->
                     </div>
-                    
+
                     <div class="mt-4 pt-3 border-top text-end">
                         <button type="button" class="btn btn-light px-4 rounded-pill fw-semibold" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary px-4 rounded-pill shadow-sm fw-bold" id="btnSubmitPoll">
@@ -183,21 +183,12 @@
             <div class="modal-body p-4 bg-white">
                 <h4 class="fw-bold text-dark mb-1" id="resQuestion">Loading...</h4>
                 <p class="text-muted small mb-4" id="resTotalVotes">Total Votes: 0</p>
-                
+
                 <div id="resultsContainer" class="mb-4">
                     <div class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>
                 </div>
 
-                <div class="alert alert-warning border-0 shadow-sm rounded-3 mt-4">
-                    <div class="d-flex align-items-center mb-2">
-                        <i class="fa-solid fa-flask text-warning fs-4 me-2"></i>
-                        <h6 class="fw-bold text-dark mb-0">Testing Area: Mock Vote</h6>
-                    </div>
-                    <p class="small text-muted mb-2">Since the Resident Portal is not connected yet, use this area to cast fake votes and see the charts update live.</p>
-                    <div id="mockVoteContainer" class="d-flex flex-wrap gap-2">
-                        <!-- Mock vote buttons -->
-                    </div>
-                </div>
+
             </div>
             <div class="modal-footer border-top-0 pt-0">
                 <button type="button" class="btn btn-light px-4 rounded-pill fw-semibold w-100" data-bs-dismiss="modal">Close</button>
@@ -209,217 +200,189 @@
 @Html.AntiForgeryToken()
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
-    <script>
-        var pollModal, resultsModal;
-        var optionCount = 0;
+<script>
+    var pollModal, resultsModal;
+    var optionCount = 0;
 
-        $(document).ready(function () {
-            $('#pollsTable').DataTable({
-                "pageLength": 10,
-                "ordering": false,
-                "language": { "search": "", "searchPlaceholder": "Search past polls..." },
-                "dom": "<'row mb-3'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6 d-flex justify-content-end'f>>" +
-                       "<'row'<'col-sm-12'tr>>" +
-                       "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>"
-            });
-            
-            $('.dataTables_filter input').addClass('form-control form-control-sm border-0 shadow-sm bg-light').css('width', '250px');
+    $(document).ready(function () {
+    $('#pollsTable').DataTable({
+    "pageLength": 10,
+    "ordering": false,
+    "language": { "search": "", "searchPlaceholder": "Search past polls..." },
+    "dom": "<'row mb-3'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6 d-flex justify-content-end'f>>" +
+    "<'row'<'col-sm-12'tr>>" +
+    "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>"
+    });
 
-            pollModal = new bootstrap.Modal(document.getElementById('pollModal'));
-            resultsModal = new bootstrap.Modal(document.getElementById('resultsModal'));
-        });
+    $('.dataTables_filter input').addClass('form-control form-control-sm border-0 shadow-sm bg-light').css('width', '250px');
 
-        function openCreatePollModal() {
-            $('#pollForm')[0].reset();
-            $('#pEndDate').val(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]); // Default 7 days
-            $('#optionsContainer').empty();
-            optionCount = 0;
-            // Add 2 default options
-            addOptionField();
-            addOptionField();
-            pollModal.show();
-        }
+    pollModal = new bootstrap.Modal(document.getElementById('pollModal'));
+    resultsModal = new bootstrap.Modal(document.getElementById('resultsModal'));
+    });
 
-        function addOptionField() {
-            if (optionCount >= 10) {
-                Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'Maximum 10 options allowed', showConfirmButton: false, timer: 2000 });
-                return;
-            }
-            optionCount++;
-            var html = `
-                <div class="input-group mb-2 option-row" id="optRow_${optionCount}">
-                    <span class="input-group-text bg-light border-0 text-muted fw-bold">${optionCount}.</span>
-                    <input type="text" class="form-control bg-light border-0 py-2 poll-option-input" placeholder="Option text..." required />
-                    <button class="btn btn-light text-danger px-3 border-0" type="button" onclick="removeOptionField(${optionCount})"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-            `;
-            $('#optionsContainer').append(html);
-        }
+    function openCreatePollModal() {
+    $('#pollForm')[0].reset();
+    $('#pEndDate').val(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]); // Default 7 days
+    $('#optionsContainer').empty();
+    optionCount = 0;
+    // Add 2 default options
+    addOptionField();
+    addOptionField();
+    pollModal.show();
+}
 
-        function removeOptionField(id) {
-            if ($('.option-row').length <= 2) {
-                Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'Minimum 2 options required', showConfirmButton: false, timer: 2000 });
-                return;
-            }
-            $('#optRow_' + id).remove();
-            // Re-number
-            var count = 1;
-            $('.option-row .input-group-text').each(function() {
-                $(this).text(count + '.');
-                count++;
-            });
-            optionCount = count - 1;
-        }
+function addOptionField() {
+if (optionCount >= 10) {
+Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'Maximum 10 options allowed', showConfirmButton: false, timer: 2000 });
+return;
+}
+optionCount++;
+var html = `
+<div class="input-group mb-2 option-row" id="optRow_${optionCount}">
+    <span class="input-group-text bg-light border-0 text-muted fw-bold">${optionCount}.</span>
+    <input type="text" class="form-control bg-light border-0 py-2 poll-option-input" placeholder="Option text..." required />
+    <button class="btn btn-light text-danger px-3 border-0" type="button" onclick="removeOptionField(${optionCount})"><i class="fa-solid fa-xmark"></i></button>
+</div>
+`;
+$('#optionsContainer').append(html);
+}
 
-        function submitPoll() {
-            var options = [];
-            $('.poll-option-input').each(function() {
-                if ($(this).val().trim() !== '') {
-                    options.push($(this).val().trim());
-                }
-            });
+function removeOptionField(id) {
+if ($('.option-row').length <= 2) {
+Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'Minimum 2 options required', showConfirmButton: false, timer: 2000 });
+return;
+}
+$('#optRow_' + id).remove();
+// Re-number
+var count = 1;
+$('.option-row .input-group-text').each(function() {
+$(this).text(count + '.');
+count++;
+});
+optionCount = count - 1;
+}
 
-            if (options.length < 2) {
-                Swal.fire('Error', 'Please provide at least 2 valid options.', 'error');
-                return;
-            }
+function submitPoll() {
+var options = [];
+$('.poll-option-input').each(function() {
+if ($(this).val().trim() !== '') {
+options.push($(this).val().trim());
+}
+});
 
-            var data = {
-                Question: $('#pQuestion').val(),
-                Description: $('#pDesc').val(),
-                EndDate: $('#pEndDate').val(),
-                Options: options
-            };
+if (options.length < 2) {
+Swal.fire('Error', 'Please provide at least 2 valid options.', 'error');
+return;
+}
 
-            $('#btnSubmitPoll').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Publishing...');
+var data = {
+Question: $('#pQuestion').val(),
+Description: $('#pDesc').val(),
+EndDate: $('#pEndDate').val(),
+Options: options
+};
 
-            var token = $('input[name="__RequestVerificationToken"]').val();
+$('#btnSubmitPoll').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Publishing...');
 
-            $.ajax({
-                url: '/Poll/CreatePoll',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
-                headers: { "RequestVerificationToken": token },
-                success: function (res) {
-                    if (res.success) {
-                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
-                        setTimeout(() => window.location.reload(), 1500);
-                    } else {
-                        Swal.fire('Error', res.message, 'error');
-                        $('#btnSubmitPoll').prop('disabled', false).html('<i class="fa-solid fa-paper-plane me-2"></i> Publish Poll');
-                    }
-                }
-            });
-        }
+var token = $('input[name="__RequestVerificationToken"]').val();
 
-        function deletePoll(id) {
-            Swal.fire({
-                title: 'Delete Poll?',
-                text: "This will delete the poll and all associated votes. Cannot be undone.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    var token = $('input[name="__RequestVerificationToken"]').val();
-                    $.ajax({
-                        url: '/Poll/DeletePoll',
-                        type: 'POST',
-                        data: { pollId: id, __RequestVerificationToken: token },
-                        success: function (res) {
-                            if (res.success) {
-                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
-                                setTimeout(() => window.location.reload(), 1500);
-                            } else {
-                                Swal.fire('Error', res.message, 'error');
-                            }
-                        }
-                    });
-                }
-            });
-        }
+$.ajax({
+url: '/Poll/CreatePoll',
+type: 'POST',
+contentType: 'application/json',
+data: JSON.stringify(data),
+headers: { "RequestVerificationToken": token },
+success: function (res) {
+if (res.success) {
+Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+setTimeout(() => window.location.reload(), 1500);
+}
+else
+{
+    Swal.fire('Error', res.message, 'error');
+    $('#btnSubmitPoll').prop('disabled', false).html('<i class="fa-solid fa-paper-plane me-2"></i> Publish Poll');
+}
+}
+});
+}
 
-        // --- RESULTS & MOCK VOTING ---
-        var currentPollId = 0;
-        
-        function viewResults(pollId, question) {
-            currentPollId = pollId;
-            $('#resQuestion').text(decodeURIComponent(question));
-            $('#resTotalVotes').text('Loading...');
-            $('#resultsContainer').html('<div class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>');
-            $('#mockVoteContainer').empty();
-            
-            resultsModal.show();
-            loadResults(pollId);
-        }
+function deletePoll(id) {
+Swal.fire({
+title: 'Delete Poll?',
+text: "This will delete the poll and all associated votes. Cannot be undone.",
+icon: 'warning',
+showCancelButton: true,
+confirmButtonColor: '#d33',
+cancelButtonColor: '#3085d6',
+confirmButtonText: 'Yes, delete it!'
+}).then((result) => {
+if (result.isConfirmed) {
+var token = $('input[name="__RequestVerificationToken"]').val();
+$.ajax({
+url: '/Poll/DeletePoll',
+type: 'POST',
+data: { pollId: id, __RequestVerificationToken: token },
+success: function (res) {
+if (res.success) {
+Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+setTimeout(() => window.location.reload(), 1500);
+}
+else
+{
+    Swal.fire('Error', res.message, 'error');
+}
+}
+});
+}
+});
+}
 
-        function loadResults(pollId) {
-            $.get('/Poll/GetPollResults?pollId=' + pollId, function(res) {
-                if(res.success && res.data) {
-                    var poll = res.data;
-                    $('#resTotalVotes').text('Total Votes: ' + poll.totalVotes);
-                    
-                    var colors = ['bg-primary', 'bg-success', 'bg-info', 'bg-warning', 'bg-danger', 'bg-secondary'];
-                    var html = '';
-                    var mockHtml = '';
-                    
-                    poll.options.forEach(function(opt, index) {
-                        var color = colors[index % colors.length];
-                        
-                        // Progress Bar HTML
-                        html += `
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span class="fw-bold text-dark">${opt.optionText}</span>
-                                    <span class="fw-bold text-muted">${opt.votePercentage}% (${opt.voteCount})</span>
-                                </div>
-                                <div class="progress shadow-sm">
-                                    <div class="progress-bar ${color} progress-bar-striped progress-bar-animated" role="progressbar" style="width: ${opt.votePercentage}%" aria-valuenow="${opt.votePercentage}" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </div>
-                        `;
-                        
-                        // Mock Vote Button HTML
-                        mockHtml += `
-                            <button class="btn btn-outline-dark btn-sm rounded-pill fw-semibold" onclick="castMockVote(${poll.pollId}, ${opt.optionId})">
-                                Vote: ${opt.optionText}
-                            </button>
-                        `;
-                    });
-                    
-                    $('#resultsContainer').html(html);
-                    
-                    if(poll.status === 'Active') {
-                        $('#mockVoteContainer').html(mockHtml);
-                    } else {
-                        $('#mockVoteContainer').html('<span class="badge bg-secondary">Poll is Closed</span>');
-                    }
-                }
-            });
-        }
+// --- RESULTS ---
+var currentPollId = 0;
 
-        function castMockVote(pollId, optionId) {
-            var token = $('input[name="__RequestVerificationToken"]').val();
-            $.ajax({
-                url: '/Poll/MockVote',
-                type: 'POST',
-                data: { pollId: pollId, optionId: optionId, __RequestVerificationToken: token },
-                success: function (res) {
-                    if (res.success) {
-                        // Reload the results dynamically
-                        loadResults(pollId);
-                    } else {
-                        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: res.message, showConfirmButton: false, timer: 2000 });
-                    }
-                }
-            });
-        }
-    </script>
+function viewResults(pollId, question) {
+currentPollId = pollId;
+$('#resQuestion').text(decodeURIComponent(question));
+$('#resTotalVotes').text('Loading...');
+$('#resultsContainer').html('<div class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>');
+
+resultsModal.show();
+loadResults(pollId);
+}
+
+function loadResults(pollId) {
+$.get('/Poll/GetPollResults?pollId=' + pollId, function(res) {
+if(res.success && res.data) {
+var poll = res.data;
+$('#resTotalVotes').text('Total Votes: ' + poll.totalVotes);
+
+var colors = ['bg-primary', 'bg-success', 'bg-info', 'bg-warning', 'bg-danger', 'bg-secondary'];
+var html = '';
+
+poll.options.forEach(function(opt, index) {
+var color = colors[index % colors.length];
+
+// Progress Bar HTML
+html += `
+<div class="mb-3">
+    <div class="d-flex justify-content-between mb-1">
+        <span class="fw-bold text-dark">${opt.optionText}</span>
+        <span class="fw-bold text-muted">${opt.votePercentage}% (${opt.voteCount})</span>
+    </div>
+    <div class="progress shadow-sm">
+        <div class="progress-bar ${color} progress-bar-striped progress-bar-animated" role="progressbar" style="width: ${opt.votePercentage}%" aria-valuenow="${opt.votePercentage}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+</div>
+`;
+});
+
+$('#resultsContainer').html(html);
+}
+});
+}
+</script>
 }

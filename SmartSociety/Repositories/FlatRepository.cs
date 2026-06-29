@@ -61,5 +61,16 @@ namespace SmartSociety.Repositories
                 parameters, 
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<Flat?> GetFlatByUserIdAsync(int userId)
+        {
+            var query = @"
+                SELECT TOP 1 f.*, b.BlockName 
+                FROM Flats f 
+                INNER JOIN Blocks b ON f.BlockId = b.BlockId 
+                WHERE f.OwnerId = @UserId OR f.TenantId = @UserId";
+            
+            return await _dbConnection.QueryFirstOrDefaultAsync<Flat>(query, new { UserId = userId });
+        }
     }
 }

@@ -1,0 +1,386 @@
+@model IEnumerable<dynamic>
+@{
+    ViewData["Title"] = "Helper Directory - SmartSociety";
+}
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-2">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item text-muted">Community</li>
+    <li class="breadcrumb-item active fw-bold text-primary" aria-current="page">Helper Directory</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-user-shield text-success me-2"></i> Daily Helper Directory</h2>
+        <p class="text-muted mb-0">Search cook, maid, or drivers, check their live gate statuses, and read/write ratings.</p>
+    </div>
+</div>
+
+<!-- Search Bar & Filters -->
+<div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+    <div class="row g-3">
+        <div class="col-md-8">
+            <div class="input-group bg-light rounded-pill px-3 py-1.5 border">
+                <span class="input-group-text border-0 bg-transparent text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                <input type="text" id="helperSearch" class="form-control border-0 bg-transparent" placeholder="Search helpers by name, role (e.g. Cook, Maid, Driver)..." onkeyup="filterHelpers()" />
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select id="roleFilter" class="form-select bg-light border-0 rounded-pill px-4 py-2 border h-100" onchange="filterHelpers()">
+                <option value="">-- All Roles --</option>
+                <option value="Maid">Maid / Housekeeper</option>
+                <option value="Cook">Cook / Chef</option>
+                <option value="Driver">Driver / Chauffeur</option>
+                <option value="Cleaner">Cleaner / Sweeper</option>
+                <option value="Plumber">Plumber</option>
+                <option value="Electrician">Electrician</option>
+                <option value="Other">Other Helper</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Helpers Grid -->
+<div class="row g-4" id="helpersGrid">
+    @if (Model == null || !Model.Any())
+    {
+        <div class="col-12 text-center py-5">
+            <i class="fa-solid fa-user-slash fa-4x text-muted opacity-50 mb-3"></i>
+            <h5 class="fw-bold text-secondary">No Daily Helpers Found</h5>
+            <p class="text-muted small">Please contact the admin registry to verify and add helpers to the database.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var item in Model)
+        {
+            var staff = item;
+            var checkIn = item.CheckInTime as TimeSpan?;
+            var checkOut = item.CheckOutTime as TimeSpan?;
+            var isInside = checkIn.HasValue && !checkOut.HasValue;
+            var avgRating = (decimal)item.AvgRating;
+            var ratingCount = (int)item.RatingCount;
+
+            <div class="col-md-4 col-sm-6 helper-card" data-name="@staff.FullName.ToLower()" data-role="@staff.Role.ToLower()">
+                <div class="card border-0 rounded-4 shadow-sm h-100 p-3 bg-white hover-scale border-card">
+                    <!-- Top row: Status Badge & Star Average -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <!-- Live Status Badge -->
+                        @if (isInside)
+                        {
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-2.5 py-1 text-xs">
+                                <i class="fa-solid fa-right-to-bracket me-1"></i> Inside (Checked In @checkIn?.ToString(@"hh\:mm"))
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 text-xs">
+                                <i class="fa-solid fa-circle-minus me-1"></i> Outside Gate
+                            </span>
+                        }
+
+                        <!-- Rating Badge -->
+                        <div class="d-flex align-items-center text-warning small fw-bold">
+                            <i class="fa-solid fa-star me-1 text-warning"></i> 
+                            <span>@avgRating.ToString("0.0")</span>
+                            <span class="text-muted fw-normal ms-1">(@ratingCount)</span>
+                        </div>
+                    </div>
+
+                    <!-- Middle Section: Photo & Identity -->
+                    <div class="d-flex align-items-center mb-3">
+                        @if (!string.IsNullOrEmpty(staff.PhotoPath))
+                        {
+                            <img src="@staff.PhotoPath" class="rounded-circle me-3 border shadow-sm" style="width: 60px; height: 60px; object-fit: cover;" alt="@staff.FullName" />
+                        }
+                        else
+                        {
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center me-3 border border-primary-subtle shadow-sm" style="width: 60px; height: 60px; min-width: 60px;">
+                                <i class="fa-solid fa-user fa-xl"></i>
+                            </div>
+                        }
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark">@staff.FullName</h5>
+                            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2.5 py-0.5 small">@staff.Role</span>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Section: Call Link & Reviews Button -->
+                    <div class="border-top pt-3 mt-auto">
+                        <div class="d-flex justify-content-between align-items-center small mb-3">
+                            <span class="text-muted">Contact:</span>
+                            <a href="tel:@staff.ContactNumber" class="text-decoration-none fw-bold text-dark hover-blue"><i class="fa-solid fa-phone fa-xs me-1"></i> @staff.ContactNumber</a>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center small mb-3">
+                            <span class="text-muted">Shift Timings:</span>
+                            <span class="text-dark fw-medium">@staff.ShiftStart.ToString(@"hh\:mm") - @staff.ShiftEnd.ToString(@"hh\:mm")</span>
+                        </div>
+                        
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill w-100 py-1.5 fw-semibold" 
+                                    onclick="openReviewsModal(@staff.StaffId, '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(staff.FullName))', '@staff.Role', '@avgRating.ToString("0.0")', @ratingCount)">
+                                <i class="fa-regular fa-star-half-stroke me-1"></i> Reviews & Ratings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<!-- Reviews Modal -->
+<div class="modal fade" id="reviewsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-light rounded-top-4 pb-3">
+                <div class="d-flex align-items-center">
+                    <h5 class="modal-title fw-bold text-dark me-3" id="modalHelperName">Helper Reviews</h5>
+                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2.5 py-0.5 small" id="modalHelperRole"></span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <div class="row g-4">
+                    <!-- Left Column: Display Reviews -->
+                    <div class="col-md-6 border-end">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold text-dark mb-0"><i class="fa-solid fa-comments text-muted me-1"></i> Co-Resident Feedback:</h6>
+                            <div class="text-warning fw-bold small d-flex align-items-center">
+                                <i class="fa-solid fa-star me-1 text-warning"></i>
+                                <span id="modalAverageStars"></span>
+                                <span class="text-muted fw-normal ms-1" id="modalRatingCount"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Review list scrollbox -->
+                        <div class="d-flex flex-column gap-3 overflow-y-auto pe-2" id="reviewsList" style="max-height: 350px;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Submit Review Form -->
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-pen-nib text-muted me-1"></i> Rate this helper:</h6>
+                        <form id="reviewForm" onsubmit="event.preventDefault(); submitReview();">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" id="ReviewStaffId" name="StaffId" value="0" />
+                            
+                            <!-- Star Rating Selector -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small text-muted mb-1 d-block">Select Rating <span class="text-danger">*</span></label>
+                                <div class="d-flex gap-2 fs-3 text-muted star-selector" style="cursor: pointer;">
+                                    <i class="fa-solid fa-star star-option" data-value="1"></i>
+                                    <i class="fa-solid fa-star star-option" data-value="2"></i>
+                                    <i class="fa-solid fa-star star-option" data-value="3"></i>
+                                    <i class="fa-solid fa-star star-option" data-value="4"></i>
+                                    <i class="fa-solid fa-star star-option" data-value="5"></i>
+                                </div>
+                                <input type="hidden" id="SelectedRating" name="Rating" value="0" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="ReviewContent" class="form-label fw-semibold small text-muted mb-1">Write your review <span class="text-danger">*</span></label>
+                                <textarea class="form-control bg-light border-0 rounded-3" id="ReviewContent" name="Review" required rows="5" placeholder="Share your experience working with this helper. E.g. punctual, cooks delicious food, does cleaning neatly, behaves well..."></textarea>
+                            </div>
+                            
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm w-100" id="btnSubmitReview">
+                                    <i class="fa-solid fa-paper-plane me-1"></i> Submit Review
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        var reviewsModal;
+
+        $(document).ready(function() {
+            reviewsModal = new bootstrap.Modal(document.getElementById('reviewsModal'));
+
+            // Star Rating selector logic
+            $('.star-option').hover(function() {
+                var val = $(this).data('value');
+                highlightStars(val);
+            }, function() {
+                var selectedVal = $('#SelectedRating').val();
+                highlightStars(selectedVal);
+            });
+
+            $('.star-option').click(function() {
+                var val = $(this).data('value');
+                $('#SelectedRating').val(val);
+                highlightStars(val);
+            });
+        });
+
+        function highlightStars(val) {
+            $('.star-option').each(function() {
+                var itemVal = $(this).data('value');
+                if (itemVal <= val) {
+                    $(this).removeClass('text-muted').addClass('text-warning');
+                } else {
+                    $(this).removeClass('text-warning').addClass('text-muted');
+                }
+            });
+        }
+
+        function filterHelpers() {
+            var searchVal = $('#helperSearch').val().toLowerCase();
+            var roleVal = $('#roleFilter').val().toLowerCase();
+
+            $('.helper-card').each(function() {
+                var cardName = $(this).data('name');
+                var cardRole = $(this).data('role');
+
+                var nameMatch = cardName.includes(searchVal) || cardRole.includes(searchVal);
+                var roleMatch = !roleVal || cardRole === roleVal;
+
+                if (nameMatch && roleMatch) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+
+        function openReviewsModal(staffId, name, role, avgRating, count) {
+            $('#modalHelperName').text(name);
+            $('#modalHelperRole').text(role);
+            $('#modalAverageStars').text(avgRating);
+            $('#modalRatingCount').text('(' + count + ' reviews)');
+            $('#ReviewStaffId').val(staffId);
+            $('#SelectedRating').val('0');
+            $('#ReviewContent').val('');
+            highlightStars(0);
+
+            // Fetch reviews from DB
+            var list = $('#reviewsList');
+            list.empty().append('<div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin text-muted me-1"></i> Loading reviews...</div>');
+
+            $.ajax({
+                url: '/Staff/GetHelperReviews',
+                type: 'GET',
+                data: { staffId: staffId },
+                success: function(res) {
+                    list.empty();
+                    if (res.success) {
+                        if (res.data.length === 0) {
+                            list.append('<div class="text-center py-5 text-secondary small"><i class="fa-regular fa-comment-dots fa-lg mb-2 d-block"></i> No reviews posted yet. Be the first to share feedback!</div>');
+                        } else {
+                            res.data.forEach(function(review) {
+                                var dateObj = new Date(review.createdAt);
+                                var formattedDate = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+                                
+                                var starsHtml = '';
+                                for (var i = 1; i <= 5; i++) {
+                                    if (i <= review.rating) {
+                                        starsHtml += '<i class="fa-solid fa-star text-warning me-0.5" style="font-size:0.75rem;"></i>';
+                                    } else {
+                                        starsHtml += '<i class="fa-solid fa-star text-muted me-0.5" style="font-size:0.75rem;"></i>';
+                                    }
+                                }
+
+                                var card = `
+                                    <div class="bg-light rounded-3 p-3 border">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="fw-bold small text-dark">${review.reviewerName} <span class="badge bg-secondary-subtle text-secondary px-2 rounded-pill font-monospace" style="font-size:0.7rem;">Flat ${review.reviewerFlat}</span></span>
+                                            <small class="text-muted text-xs">${formattedDate}</small>
+                                        </div>
+                                        <div class="mb-2 d-flex align-items-center">${starsHtml}</div>
+                                        <p class="text-muted small mb-0" style="white-space: pre-wrap; word-break: break-word;">${review.review ?? ''}</p>
+                                    </div>
+                                `;
+                                list.append(card);
+                            });
+                        }
+                    } else {
+                        list.append('<div class="alert alert-danger text-center text-xs">Error loading reviews.</div>');
+                    }
+                },
+                error: function() {
+                    list.empty();
+                    list.append('<div class="alert alert-danger text-center text-xs">Error loading reviews.</div>');
+                }
+            });
+
+            reviewsModal.show();
+        }
+
+        function submitReview() {
+            var rating = $('#SelectedRating').val();
+            var review = $('#ReviewContent').val();
+            var staffId = $('#ReviewStaffId').val();
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            if (rating === '0') {
+                Swal.fire('Required', 'Please select a star rating (1-5).', 'warning');
+                return;
+            }
+
+            $('#btnSubmitReview').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Submitting...');
+
+            $.ajax({
+                url: '/Staff/SubmitHelperReview',
+                type: 'POST',
+                data: {
+                    StaffId: staffId,
+                    Rating: rating,
+                    Review: review,
+                    __RequestVerificationToken: token
+                },
+                success: function(res) {
+                    if (res.success) {
+                        reviewsModal.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Review Posted!',
+                            text: res.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Failed', res.message, 'error');
+                        $('#btnSubmitReview').prop('disabled', false).html('<i class="fa-solid fa-paper-plane me-1"></i> Submit Review');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnSubmitReview').prop('disabled', false).html('<i class="fa-solid fa-paper-plane me-1"></i> Submit Review');
+                }
+            });
+        }
+    </script>
+    <style>
+        .hover-scale {
+            transition: all 0.25s ease-in-out;
+        }
+        .hover-scale:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+        }
+        .border-card {
+            border: 1px solid rgba(0, 0, 0, 0.04) !important;
+        }
+        .hover-blue:hover {
+            color: #0d6efd !important;
+        }
+        .text-xs {
+            font-size: 0.75rem;
+        }
+        .text-muted {
+            color: #64748b !important;
+        }
+    </style>
+}

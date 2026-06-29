@@ -29,6 +29,11 @@ namespace SmartSociety.Repositories
             parameters.Add("@Rate", setting.Rate);
             parameters.Add("@PenaltyAmount", setting.PenaltyAmount);
             parameters.Add("@DueDays", setting.DueDays);
+            parameters.Add("@GstEnabled", setting.GstEnabled);
+            parameters.Add("@GstRate", setting.GstRate);
+            parameters.Add("@GstThreshold", setting.GstThreshold);
+            parameters.Add("@Gstin", setting.Gstin);
+            parameters.Add("@SocietyAnnualTurnover", setting.SocietyAnnualTurnover);
 
             await _dbConnection.ExecuteAsync(
                 "sp_Maintenance_UpdateSettings", 
@@ -136,6 +141,25 @@ namespace SmartSociety.Repositories
                 "sp_Maintenance_DeleteBill",
                 parameters,
                 commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<IEnumerable<MaintenanceBill>> GetBillsByFlatIdAsync(int flatId)
+        {
+            var query = @"
+                SELECT 
+                    B.*, 
+                    F.FlatNumber, B1.BlockName, 
+                    O.FullName AS OwnerName, 
+                    T.FullName AS TenantName
+                FROM MaintenanceBills B
+                INNER JOIN Flats F ON B.FlatId = F.FlatId
+                INNER JOIN Blocks B1 ON F.BlockId = B1.BlockId
+                LEFT JOIN Users O ON F.OwnerId = O.UserId
+                LEFT JOIN Users T ON F.TenantId = T.UserId
+                WHERE B.FlatId = @FlatId
+                ORDER BY B.BillYear DESC, B.BillMonth DESC";
+
+            return await _dbConnection.QueryAsync<MaintenanceBill>(query, new { FlatId = flatId });
         }
     }
 }

@@ -2,11 +2,11 @@
 
 @{
     ViewData["Title"] = "Financial Accounts & Expenses";
-    var stats = Model.Stats as SmartSociety.Models.FinanceDashboardStats;
-    var expenses = Model.Expenses as IEnumerable<SmartSociety.Models.Expense>;
-    var incomes = Model.Incomes as IEnumerable<SmartSociety.Models.OtherIncome>;
-    var categories = Model.Categories as IEnumerable<SmartSociety.Models.ExpenseCategory>;
-    var chartData = Model.ChartData as IEnumerable<SmartSociety.Models.ChartDataPoint>;
+    var stats = (Model.Stats as SmartSociety.Models.FinanceDashboardStats) ?? new SmartSociety.Models.FinanceDashboardStats();
+    var expenses = (Model.Expenses as IEnumerable<SmartSociety.Models.Expense>) ?? Enumerable.Empty<SmartSociety.Models.Expense>();
+    var incomes = (Model.Incomes as IEnumerable<SmartSociety.Models.OtherIncome>) ?? Enumerable.Empty<SmartSociety.Models.OtherIncome>();
+    var categories = (Model.Categories as IEnumerable<SmartSociety.Models.ExpenseCategory>) ?? Enumerable.Empty<SmartSociety.Models.ExpenseCategory>();
+    var chartData = (Model.ChartData as IEnumerable<SmartSociety.Models.ChartDataPoint>) ?? Enumerable.Empty<SmartSociety.Models.ChartDataPoint>();
 }
 
 <!-- DataTables Buttons CSS -->

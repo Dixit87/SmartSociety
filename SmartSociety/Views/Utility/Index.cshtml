@@ -2,10 +2,10 @@
 
 @{
     ViewData["Title"] = "Utility Bills & Meter Readings";
-    var stats = Model.Stats as SmartSociety.Models.UtilityDashboardStats;
-    var bills = Model.Bills as IEnumerable<SmartSociety.Models.UtilityBill>;
-    var utilityTypes = Model.UtilityTypes as IEnumerable<SmartSociety.Models.UtilityType>;
-    var flats = Model.Flats as IEnumerable<SmartSociety.Models.Flat>;
+    var stats = (Model.Stats as SmartSociety.Models.UtilityDashboardStats) ?? new SmartSociety.Models.UtilityDashboardStats();
+    var bills = (Model.Bills as IEnumerable<SmartSociety.Models.UtilityBill>) ?? Enumerable.Empty<SmartSociety.Models.UtilityBill>();
+    var utilityTypes = (Model.UtilityTypes as IEnumerable<SmartSociety.Models.UtilityType>) ?? Enumerable.Empty<SmartSociety.Models.UtilityType>();
+    var flats = (Model.Flats as IEnumerable<SmartSociety.Models.Flat>) ?? Enumerable.Empty<SmartSociety.Models.Flat>();
 }
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />

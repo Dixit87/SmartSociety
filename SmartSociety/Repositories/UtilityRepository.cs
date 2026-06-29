@@ -153,5 +153,26 @@ namespace SmartSociety.Repositories
                 "sp_Utility_GetDashboardStats", 
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<IEnumerable<UtilityBill>> GetUtilityBillsByFlatIdAsync(int flatId)
+        {
+            var query = @"
+                SELECT 
+                    B.*, 
+                    UT.Name AS UtilityName, UT.MeasurementUnit, UT.RatePerUnit,
+                    F.FlatNumber, B1.BlockName, 
+                    O.FullName AS OwnerName, 
+                    T.FullName AS TenantName
+                FROM UtilityBills B
+                INNER JOIN UtilityTypes UT ON B.UtilityTypeId = UT.UtilityTypeId
+                INNER JOIN Flats F ON B.FlatId = F.FlatId
+                INNER JOIN Blocks B1 ON F.BlockId = B1.BlockId
+                LEFT JOIN Users O ON F.OwnerId = O.UserId
+                LEFT JOIN Users T ON F.TenantId = T.UserId
+                WHERE B.FlatId = @FlatId
+                ORDER BY B.BillYear DESC, B.BillMonth DESC";
+
+            return await _dbConnection.QueryAsync<UtilityBill>(query, new { FlatId = flatId });
+        }
     }
 }

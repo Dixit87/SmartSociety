@@ -56,4 +56,28 @@ namespace SmartSociety.Models
         public string CategoryName { get; set; }
         public decimal TotalAmount { get; set; }
     }
+
+    public class FixedDeposit
+    {
+        public int FdId { get; set; }
+        public string FdNumber { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public decimal PrincipalAmount { get; set; }
+        public decimal InterestRate { get; set; }
+        public DateTime MaturityDate { get; set; }
+        public decimal MaturityAmount { get; set; }
+        public string Status { get; set; } = "Active"; // Active, Matured, Liquidated
+        public DateTime DateInvested { get; set; } = DateTime.Now;
+        public string? Notes { get; set; }
+    }
+
+    public class SinkingFundTransaction
+    {
+        public int TransactionId { get; set; }
+        public string Type { get; set; } = "Contribution"; // Contribution, Withdrawal
+        public decimal Amount { get; set; }
+        public DateTime TransactionDate { get; set; } = DateTime.Now;
+        public string Purpose { get; set; } = string.Empty;
+        public string? ReferenceId { get; set; }
+    }
 }

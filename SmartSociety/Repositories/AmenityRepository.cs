@@ -105,5 +105,33 @@ namespace SmartSociety.Repositories
                 new { BookingId = bookingId, Status = status, Remarks = remarks },
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<IEnumerable<AmenityBooking>> GetBookingsByFlatIdAsync(int flatId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            string query = @"
+                SELECT 
+                    b.BookingId, b.AmenityId, b.FlatId, b.UserId, b.BookingDate, 
+                    b.StartTime, b.EndTime, b.Purpose, b.Status, b.Remarks, b.TotalAmount, b.PaymentStatus, b.CreatedAt,
+                    a.Name AS AmenityName,
+                    f.FlatNumber AS FlatNo,
+                    u.FullName AS ResidentName,
+                    u.PhoneNumber AS ResidentPhone
+                FROM AmenityBookings b
+                INNER JOIN Amenities a ON b.AmenityId = a.AmenityId
+                INNER JOIN Flats f ON b.FlatId = f.FlatId
+                INNER JOIN Users u ON b.UserId = u.UserId
+                WHERE b.FlatId = @FlatId
+                ORDER BY b.BookingDate DESC, b.StartTime DESC;";
+            return await connection.QueryAsync<AmenityBooking>(query, new { FlatId = flatId });
+        }
+
+        public async Task UpdateBookingPaymentStatusAsync(int bookingId, string paymentStatus)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.ExecuteAsync(
+                "UPDATE AmenityBookings SET PaymentStatus = @PaymentStatus WHERE BookingId = @BookingId",
+                new { BookingId = bookingId, PaymentStatus = paymentStatus });
+        }
     }
 }

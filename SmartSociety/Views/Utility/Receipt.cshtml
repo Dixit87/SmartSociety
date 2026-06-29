@@ -37,7 +37,7 @@
             <button onclick="window.print()" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm me-2">
                 <i class="fa-solid fa-print me-2"></i> Print Receipt
             </button>
-            <a href="/Utility" class="btn btn-outline-secondary px-4 py-2 rounded-pill shadow-sm">
+            <a href="@(User.IsInRole("Resident") ? "/Utility/MyUsage" : "/Utility")" class="btn btn-outline-secondary px-4 py-2 rounded-pill shadow-sm">
                 <i class="fa-solid fa-arrow-left me-2"></i> Back to Utility
             </a>
         </div>

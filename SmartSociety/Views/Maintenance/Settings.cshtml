@@ -83,6 +83,64 @@
                         </div>
                     </div>
 
+                    <h5 class="fw-bold text-dark mb-4 border-bottom pb-2 mt-5"><i class="fa-solid fa-percent text-success me-2"></i> GST & Tax Configuration</h5>
+                    
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-12">
+                            <div class="form-check form-switch p-3 bg-light rounded-3 d-flex align-items-center justify-content-between">
+                                <div class="pe-3">
+                                    <label class="form-check-label fw-bold text-dark mb-0" asp-for="GstEnabled">Enable GST Billing</label>
+                                    <div class="form-text text-muted mt-1" style="font-size: 0.8rem;">Check this to automatically calculate CGST and SGST on maintenance bills.</div>
+                                </div>
+                                <input class="form-check-input ms-0" type="checkbox" asp-for="GstEnabled" id="GstEnabledToggle" style="width: 2.5em; height: 1.25em;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="GstFieldsContainer" style="display: none;">
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label asp-for="Gstin" class="form-label fw-semibold text-muted small">GSTIN Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="fa-solid fa-address-card"></i></span>
+                                    <input asp-for="Gstin" class="form-control bg-light border-0 py-2" placeholder="e.g. 27AAAAA1111A1Z1" />
+                                </div>
+                                <span asp-validation-for="Gstin" class="text-danger small"></span>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label asp-for="GstRate" class="form-label fw-semibold text-muted small">GST Rate (%)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="fa-solid fa-percent"></i></span>
+                                    <input asp-for="GstRate" class="form-control bg-light border-0 py-2" type="number" step="0.01" />
+                                </div>
+                                <span asp-validation-for="GstRate" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label asp-for="GstThreshold" class="form-label fw-semibold text-muted small">GST Threshold per Bill (₹)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+                                    <input asp-for="GstThreshold" class="form-control bg-light border-0 py-2" type="number" step="0.01" />
+                                </div>
+                                <span asp-validation-for="GstThreshold" class="text-danger small"></span>
+                                <div class="form-text text-muted mt-1" style="font-size: 0.8rem;">GST will apply only if the bill subtotal exceeds this amount (default: ₹7,500).</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="SocietyAnnualTurnover" class="form-label fw-semibold text-muted small">Society Annual Turnover (₹)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="fa-solid fa-chart-line"></i></span>
+                                    <input asp-for="SocietyAnnualTurnover" class="form-control bg-light border-0 py-2" type="number" step="0.01" />
+                                </div>
+                                <span asp-validation-for="SocietyAnnualTurnover" class="text-danger small"></span>
+                                <div class="form-text text-muted mt-1" style="font-size: 0.8rem;">GST is legally mandatory only if annual turnover exceeds ₹20 Lakhs (₹2,000,000).</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mt-5 text-end">
                         <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill shadow-sm fw-semibold">
                             <i class="fa-solid fa-floppy-disk me-2"></i> Save Configuration
@@ -96,4 +154,21 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var toggle = document.getElementById("GstEnabledToggle");
+            var container = document.getElementById("GstFieldsContainer");
+            
+            function toggleFields() {
+                if (toggle.checked) {
+                    container.style.display = "block";
+                } else {
+                    container.style.display = "none";
+                }
+            }
+            
+            toggle.addEventListener("change", toggleFields);
+            toggleFields(); // Initial state
+        });
+    </script>
 }

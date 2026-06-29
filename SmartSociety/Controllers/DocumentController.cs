@@ -1,13 +1,15 @@
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using SmartSociety.Models;
 using SmartSociety.Repositories;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace SmartSociety.Controllers
 {
+    [Authorize]
     public class DocumentController : Controller
     {
         private readonly IDocumentRepository _repository;
@@ -27,6 +29,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UploadDocument(DocumentUploadViewModel model)
         {
             try
@@ -34,6 +37,14 @@ namespace SmartSociety.Controllers
                 if (model.File == null || model.File.Length == 0)
                 {
                     return Json(new { success = false, message = "Please select a valid file to upload." });
+                }
+
+                // Security: Validate file extension
+                var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png" };
+                var extension = Path.GetExtension(model.File.FileName).ToLower();
+                if (!allowedExtensions.Contains(extension))
+                {
+                    return Json(new { success = false, message = "Invalid file type. Allowed formats: PDF, Word, Excel, Images." });
                 }
 
                 // 1. Ensure directory exists
@@ -73,6 +84,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> EditDocument(DocumentEditViewModel model)
         {
             try
@@ -84,6 +96,14 @@ namespace SmartSociety.Controllers
 
                 if (model.File != null && model.File.Length > 0)
                 {
+                    // Security: Validate file extension
+                    var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png" };
+                    var extension = Path.GetExtension(model.File.FileName).ToLower();
+                    if (!allowedExtensions.Contains(extension))
+                    {
+                        return Json(new { success = false, message = "Invalid file type. Allowed formats: PDF, Word, Excel, Images." });
+                    }
+
                     // 1. Ensure directory exists
                     string uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "documents");
                     if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
@@ -113,7 +133,7 @@ namespace SmartSociety.Controllers
                 if (newFilePath != null) existingDoc.FilePath = newFilePath;
 
                 await _repository.UpdateDocumentAsync(existingDoc);
-                
+
                 return Json(new { success = true, message = "Document updated successfully!" });
             }
             catch (Exception ex)
@@ -124,6 +144,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteDocument(int documentId)
         {
             try
@@ -148,6 +169,16 @@ namespace SmartSociety.Controllers
             {
                 return Json(new { success = false, message = "Error deleting document: " + ex.Message });
             }
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Resident")]
+        public async Task<IActionResult> MyDocuments()
+        {
+            var documents = (await _repository.GetAllDocumentsAsync())
+                            .Where(d => d.IsVisibleToResidents)
+                            .OrderByDescending(d => d.UploadedAt);
+            return View(documents);
         }
     }
 }

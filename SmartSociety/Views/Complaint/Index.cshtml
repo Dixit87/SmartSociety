@@ -2,11 +2,11 @@
 
 @{
 ViewData["Title"] = "Complaint Helpdesk";
-var stats = Model.Stats as SmartSociety.Models.ComplaintDashboardStats;
-var complaints = Model.Complaints as IEnumerable<SmartSociety.Models.Complaint>;
-var flats = Model.Flats as IEnumerable<SmartSociety.Models.Flat>;
-var residents = Model.Residents as IEnumerable<SmartSociety.Models.User>;
-var technicians = Model.Technicians as IEnumerable<SmartSociety.Models.User>;
+var stats = (Model.Stats as SmartSociety.Models.ComplaintDashboardStats) ?? new SmartSociety.Models.ComplaintDashboardStats();
+var complaints = (Model.Complaints as IEnumerable<SmartSociety.Models.Complaint>) ?? Enumerable.Empty<SmartSociety.Models.Complaint>();
+var flats = (Model.Flats as IEnumerable<SmartSociety.Models.Flat>) ?? Enumerable.Empty<SmartSociety.Models.Flat>();
+var residents = (Model.Residents as IEnumerable<SmartSociety.Models.User>) ?? Enumerable.Empty<SmartSociety.Models.User>();
+var technicians = (Model.Technicians as IEnumerable<SmartSociety.Models.User>) ?? Enumerable.Empty<SmartSociety.Models.User>();
 }
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
@@ -391,13 +391,52 @@ var technicians = Model.Technicians as IEnumerable<SmartSociety.Models.User>;
                     <input type="hidden" id="statusComplaintId" name="complaintId" />
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-muted mb-1">New Status <span class="text-danger">*</span></label>
-                        <select id="statusSelect" name="status" class="form-select bg-light border-0 py-2" required>
+                        <select id="statusSelect" name="status" class="form-select bg-light border-0 py-2" required onchange="toggleSparePartsSection()">
                             <option value="Open">Open</option>
                             <option value="InProgress">In Progress</option>
                             <option value="Resolved">Resolved</option>
                             <option value="Closed">Closed</option>
                         </select>
                     </div>
+
+                    <!-- Consumed Spare Parts Section (Visible only when 'Resolved' is selected) -->
+                    <div id="sparePartsSection" class="d-none border rounded-3 p-3 bg-light mb-3">
+                        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-warehouse text-success me-2"></i> Consume Spare Parts</h6>
+                        
+                        <div class="row g-2 mb-3">
+                            <div class="col-8">
+                                <select id="sparePartSelect" class="form-select border-0 bg-white py-2 shadow-sm">
+                                    <option value="">-- Select Spare Part --</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <div class="input-group shadow-sm">
+                                    <input type="number" id="sparePartQty" class="form-control border-0 bg-white py-2" value="1" min="1" />
+                                    <button type="button" class="btn btn-success fw-bold" onclick="addSparePartRow()"><i class="fa-solid fa-plus"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive" style="max-height: 150px;">
+                            <table class="table table-sm table-bordered bg-white align-middle mb-0" id="selectedPartsTable" style="font-size: 0.85rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Part Name</th>
+                                        <th style="width: 60px;">Qty</th>
+                                        <th style="width: 80px;">Cost</th>
+                                        <th style="width: 40px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="selectedPartsBody">
+                                    <tr id="noPartsRow"><td colspan="4" class="text-center text-muted py-2">No parts consumed yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end fw-bold mt-2 small text-dark" id="partsTotalCost">
+                            Total Parts Cost: ₹0.00
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-muted mb-1">Admin Remarks (Optional)</label>
                         <textarea id="statusRemarks" name="adminRemarks" class="form-control bg-light border-0" rows="3" placeholder="Add any notes about the resolution..."></textarea>
@@ -432,8 +471,33 @@ var technicians = Model.Technicians as IEnumerable<SmartSociety.Models.User>;
                 <div class="row g-4">
                     <div class="col-md-7">
                         <h6 class="fw-bold text-muted small text-uppercase mb-2">Issue Description</h6>
-                        <div class="p-3 bg-light rounded-3 mb-4">
+                        <div class="p-3 bg-light rounded-3 mb-3">
                             <p class="mb-0 text-dark" id="viewDescription" style="white-space: pre-wrap; font-size: 0.95rem;">Description</p>
+                        </div>
+
+                        <!-- Consumed Spare Parts list in details view -->
+                        <div id="viewSparePartsContainer" class="d-none mb-3">
+                            <h6 class="fw-bold text-muted small text-uppercase mb-2">Spare Parts Consumed</h6>
+                            <div class="p-3 border rounded-3 bg-light">
+                                <table class="table table-sm table-borderless align-middle mb-0 text-dark" style="font-size: 0.85rem;">
+                                    <thead>
+                                        <tr class="border-bottom">
+                                            <th class="py-1">Part Name</th>
+                                            <th class="text-center py-1" style="width: 70px;">Qty</th>
+                                            <th class="text-end py-1" style="width: 100px;">Unit Cost</th>
+                                            <th class="text-end py-1" style="width: 100px;">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="viewSparePartsBody">
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="border-top fw-bold">
+                                            <td colspan="3" class="pt-2">Total Materials Cost</td>
+                                            <td class="text-end pt-2" id="viewSparePartsTotal">₹0.00</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
                         </div>
 
                         <h6 class="fw-bold text-muted small text-uppercase mb-2">Admin Remarks</h6>
@@ -465,24 +529,27 @@ var technicians = Model.Technicians as IEnumerable<SmartSociety.Models.User>;
 
 <script>
     var raiseModal, assignModal, statusModal, viewModal, editModal;
+    var allInventoryItems = [];
 
     $(document).ready(function () {
-    $('#complaintsTable').DataTable({
-    "pageLength": 25,
-    "ordering": false,
-    "responsive": true,
-    "language": {
-    "search": "_INPUT_",
-    "searchPlaceholder": "Search tickets..."
-}
-});
+        $('#complaintsTable').DataTable({
+            "pageLength": 25,
+            "ordering": false,
+            "responsive": true,
+            "language": {
+                "search": "_INPUT_",
+                "searchPlaceholder": "Search tickets..."
+            }
+        });
 
-raiseModal = new bootstrap.Modal(document.getElementById('raiseModal'));
-assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
-statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
-viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
-editModal = new bootstrap.Modal(document.getElementById('editModal'));
-});
+        raiseModal = new bootstrap.Modal(document.getElementById('raiseModal'));
+        assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+        statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+        viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
+        editModal = new bootstrap.Modal(document.getElementById('editModal'));
+
+        loadInventoryItems();
+    });
 
 function applyFilters(status) {
 var url = '/Complaint?';
@@ -634,64 +701,200 @@ else
 }
 
 function openStatusModal(id, status, remarks) {
-$('#statusForm')[0].reset();
-$('#statusComplaintId').val(id);
-$('#statusSelect').val(status);
-$('#statusRemarks').val(decodeURIComponent(remarks));
-statusModal.show();
+    $('#statusForm')[0].reset();
+    $('#statusComplaintId').val(id);
+    $('#statusSelect').val(status);
+    $('#statusRemarks').val(decodeURIComponent(remarks));
+    selectedSpareParts = [];
+    toggleSparePartsSection();
+    statusModal.show();
 }
 
 function submitStatus() {
-var form = $('#statusForm')[0];
-var formData = new FormData(form);
-formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+    var form = $('#statusForm')[0];
+    var formData = new FormData(form);
+    formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
 
-$('#btnSubmitStatus').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+    // If Resolved, add the spare parts as JSON
+    var status = $('#statusSelect').val();
+    if (status === 'Resolved' && selectedSpareParts.length > 0) {
+        var partsData = selectedSpareParts.map(p => ({
+            itemId: p.itemId,
+            quantityUsed: p.quantityUsed
+        }));
+        formData.append('sparePartsJson', JSON.stringify(partsData));
+    }
 
-$.ajax({
-url: '/Complaint/UpdateStatus',
-type: 'POST',
-data: formData,
-processData: false,
-contentType: false,
-success: function (res) {
-if (res.success) {
-Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
-setTimeout(() => location.reload(), 1500);
-}
-else
-{
-    Swal.fire('Error', res.message, 'error');
-    $('#btnSubmitStatus').prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Status');
-}
-}
-});
+    $('#btnSubmitStatus').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+
+    $.ajax({
+        url: '/Complaint/UpdateStatus',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (res) {
+            if (res.success) {
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                Swal.fire('Error', res.message, 'error');
+                $('#btnSubmitStatus').prop('disabled', false).html('<i class="fa-solid fa-save me-2"></i> Save Status');
+            }
+        }
+    });
 }
 
 function viewComplaint(id, title, desc, resident, cat, status, remarks, photoUrl) {
-$('#viewTitle').text(decodeURIComponent(title));
-$('#viewCategory').text(cat);
-$('#viewStatus').text(status);
-$('#viewDescription').text(decodeURIComponent(desc));
+    $('#viewTitle').text(decodeURIComponent(title));
+    $('#viewCategory').text(cat);
+    $('#viewStatus').text(status);
+    $('#viewDescription').text(decodeURIComponent(desc));
 
-var rem = decodeURIComponent(remarks);
-if(rem) {
-$('#viewRemarks').text(rem).removeClass('fst-italic').addClass('fw-semibold');
-}
-else
-{
-    $('#viewRemarks').text('No remarks added yet.').addClass('fst-italic').removeClass('fw-semibold');
+    var rem = decodeURIComponent(remarks);
+    if(rem) {
+        $('#viewRemarks').text(rem).removeClass('fst-italic').addClass('fw-semibold');
+    } else {
+        $('#viewRemarks').text('No remarks added yet.').addClass('fst-italic').removeClass('fw-semibold');
+    }
+
+    if(photoUrl && photoUrl !== '') {
+        $('#viewPhotoContainer').html('<img src="' + photoUrl + '" class="img-fluid w-100" style="object-fit: cover;" alt="Complaint Photo" />');
+    } else {
+        $('#viewPhotoContainer').html('<div class="text-center text-muted p-4"><i class="fa-solid fa-image-slash fs-1 mb-2 opacity-50"></i><p class="mb-0 small fw-semibold">No Photo Attached</p></div>');
+    }
+
+    // Fetch and display consumed spare parts
+    $('#viewSparePartsContainer').addClass('d-none');
+    $('#viewSparePartsBody').empty();
+
+    $.get('/Complaint/GetComplaintSpareParts?complaintId=' + id, function (res) {
+        if (res.success && res.data.length > 0) {
+            $('#viewSparePartsContainer').removeClass('d-none');
+            var total = 0;
+            res.data.forEach(function (part) {
+                var rowTotal = part.quantityUsed * part.costPerUnit;
+                total += rowTotal;
+                $('#viewSparePartsBody').append(`<tr>
+                    <td class="py-1">${part.itemName}</td>
+                    <td class="text-center py-1">${part.quantityUsed}</td>
+                    <td class="text-end py-1">₹${part.costPerUnit.toFixed(2)}</td>
+                    <td class="text-end py-1">₹${rowTotal.toFixed(2)}</td>
+                </tr>`);
+            });
+            $('#viewSparePartsTotal').text('₹' + total.toFixed(2));
+        }
+    });
+
+    viewModal.show();
 }
 
-if(photoUrl && photoUrl !== '') {
-$('#viewPhotoContainer').html('<img src="' + photoUrl + '" class="img-fluid w-100" style="object-fit: cover;" alt="Complaint Photo" />');
-}
-else
-{
-    $('#viewPhotoContainer').html('<div class="text-center text-muted p-4"><i class="fa-solid fa-image-slash fs-1 mb-2 opacity-50"></i><p class="mb-0 small fw-semibold">No Photo Attached</p></div>');
+// --- CONSUMED SPARE PARTS HELPERS ---
+function loadInventoryItems() {
+    $.get('/AssetVendor/GetInventoryItemsJson', function (res) {
+        if (res.success) {
+            allInventoryItems = res.data;
+            var select = $('#sparePartSelect');
+            select.empty().append('<option value="">-- Select Spare Part --</option>');
+            res.data.forEach(function (item) {
+                if (item.quantity > 0) {
+                    select.append(`<option value="${item.itemId}">${item.itemName} (${item.quantity} ${item.unit} available | ₹${item.costPerUnit}/u)</option>`);
+                } else {
+                    select.append(`<option value="${item.itemId}" disabled class="text-muted">${item.itemName} (OUT OF STOCK)</option>`);
+                }
+            });
+        }
+    });
 }
 
-viewModal.show();
+var selectedSpareParts = [];
+
+function toggleSparePartsSection() {
+    var status = $('#statusSelect').val();
+    if (status === 'Resolved') {
+        $('#sparePartsSection').removeClass('d-none');
+        selectedSpareParts = [];
+        renderSelectedParts();
+    } else {
+        $('#sparePartsSection').addClass('d-none');
+    }
+}
+
+function addSparePartRow() {
+    var itemId = parseInt($('#sparePartSelect').val());
+    var qty = parseInt($('#sparePartQty').val());
+
+    if (isNaN(itemId) || itemId <= 0) {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'Please select a spare part.', showConfirmButton: false, timer: 2000 });
+        return;
+    }
+
+    if (isNaN(qty) || qty <= 0) {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'Please enter a valid quantity.', showConfirmButton: false, timer: 2000 });
+        return;
+    }
+
+    var item = allInventoryItems.find(i => i.itemId === itemId);
+    if (!item) return;
+
+    if (qty > item.quantity) {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: `Insufficient stock! Only ${item.quantity} ${item.unit} available.`, showConfirmButton: false, timer: 3000 });
+        return;
+    }
+
+    var existing = selectedSpareParts.find(p => p.itemId === itemId);
+    if (existing) {
+        if (existing.quantityUsed + qty > item.quantity) {
+            Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: `Cannot add more. Total added (${existing.quantityUsed + qty}) exceeds available stock (${item.quantity}).`, showConfirmButton: false, timer: 3000 });
+            return;
+        }
+        existing.quantityUsed += qty;
+    } else {
+        selectedSpareParts.push({
+            itemId: itemId,
+            itemName: item.itemName,
+            quantityUsed: qty,
+            costPerUnit: item.costPerUnit,
+            unit: item.unit
+        });
+    }
+
+    $('#sparePartSelect').val('');
+    $('#sparePartQty').val('1');
+
+    renderSelectedParts();
+}
+
+function removeSparePartRow(itemId) {
+    selectedSpareParts = selectedSpareParts.filter(p => p.itemId !== itemId);
+    renderSelectedParts();
+}
+
+function renderSelectedParts() {
+    var body = $('#selectedPartsBody');
+    body.empty();
+
+    if (selectedSpareParts.length === 0) {
+        body.append('<tr id="noPartsRow"><td colspan="4" class="text-center text-muted py-2">No parts consumed yet.</td></tr>');
+        $('#partsTotalCost').text('Total Parts Cost: ₹0.00');
+        return;
+    }
+
+    var total = 0;
+    selectedSpareParts.forEach(function (p) {
+        var cost = p.quantityUsed * p.costPerUnit;
+        total += cost;
+        body.append(`<tr>
+            <td>${p.itemName}</td>
+            <td class="text-center">${p.quantityUsed}</td>
+            <td>₹${cost.toFixed(2)}</td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-link text-danger p-0 border-0" onclick="removeSparePartRow(${p.itemId})"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>`);
+    });
+
+    $('#partsTotalCost').text('Total Parts Cost: ₹' + total.toFixed(2));
 }
 </script>
 }

@@ -16,9 +16,35 @@ namespace SmartSociety.Repositories
 
         public async Task<IEnumerable<Poll>> GetAllPollsAsync()
         {
-            return await _dbConnection.QueryAsync<Poll>(
+            var polls = (await _dbConnection.QueryAsync<Poll>(
                 "sp_Polls_GetAll",
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure)).ToList();
+
+            if (polls.Any())
+            {
+                var pollIds = polls.Select(p => p.PollId).ToList();
+                var options = (await _dbConnection.QueryAsync<PollOption>(
+                    "SELECT o.OptionId, o.PollId, o.OptionText, " +
+                    "(SELECT COUNT(*) FROM PollVotes v WHERE v.OptionId = o.OptionId) AS VoteCount " +
+                    "FROM PollOptions o " +
+                    "WHERE o.PollId IN @PollIds",
+                    new { PollIds = pollIds })).ToList();
+
+                foreach (var poll in polls)
+                {
+                    poll.Options = options.Where(o => o.PollId == poll.PollId).ToList();
+                    poll.TotalVotes = poll.Options.Sum(o => o.VoteCount);
+                    if (poll.TotalVotes > 0)
+                    {
+                        foreach (var opt in poll.Options)
+                        {
+                            opt.VotePercentage = Math.Round(((double)opt.VoteCount / poll.TotalVotes) * 100, 1);
+                        }
+                    }
+                }
+            }
+
+            return polls;
         }
 
         public async Task<Poll?> GetPollByIdAsync(int pollId)
@@ -108,16 +134,38 @@ namespace SmartSociety.Repositories
                 commandType: CommandType.StoredProcedure);
         }
 
-        public async Task MockVoteAsync(int pollId, int optionId)
+
+        public async Task<Dictionary<int, int>> GetUserVotesAsync(int userId)
         {
-            var parameters = new DynamicParameters();
-            parameters.Add("@PollId", pollId);
-            parameters.Add("@OptionId", optionId);
+            var votes = await _dbConnection.QueryAsync<UserVoteDto>(
+                "SELECT PollId, OptionId FROM PollVotes WHERE UserId = @UserId",
+                new { UserId = userId });
+
+            return votes.ToDictionary(v => v.PollId, v => v.OptionId);
+        }
+
+        public async Task<bool> CastVoteAsync(int pollId, int optionId, int userId)
+        {
+            var count = await _dbConnection.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM PollVotes WHERE PollId = @PollId AND UserId = @UserId",
+                new { PollId = pollId, UserId = userId });
+
+            if (count > 0)
+            {
+                return false;
+            }
 
             await _dbConnection.ExecuteAsync(
-                "sp_Polls_MockVote",
-                parameters,
-                commandType: CommandType.StoredProcedure);
+                "INSERT INTO PollVotes (PollId, OptionId, UserId, VotedAt) VALUES (@PollId, @OptionId, @UserId, GETDATE())",
+                new { PollId = pollId, OptionId = optionId, UserId = userId });
+
+            return true;
+        }
+
+        private class UserVoteDto
+        {
+            public int PollId { get; set; }
+            public int OptionId { get; set; }
         }
     }
 }

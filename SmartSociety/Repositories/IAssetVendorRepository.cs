@@ -20,5 +20,23 @@ namespace SmartSociety.Repositories
         Task<IEnumerable<AssetServiceLog>> GetServiceLogsByAssetIdAsync(int assetId);
         Task<int> UpsertServiceLogAsync(AssetServiceLog log);
         Task DeleteServiceLogAsync(int logId);
+
+        // Maintenance Schedule Operations
+        Task<IEnumerable<MaintenanceSchedule>> GetMaintenanceSchedulesAsync();
+        Task<MaintenanceSchedule?> GetMaintenanceScheduleByIdAsync(int scheduleId);
+        Task<int> UpsertMaintenanceScheduleAsync(MaintenanceSchedule schedule);
+        Task DeleteMaintenanceScheduleAsync(int scheduleId);
+        Task<int> ProcessDueMaintenanceSchedulesAsync();
+
+        // Inventory Operations
+        Task<IEnumerable<InventoryItem>> GetAllInventoryItemsAsync();
+        Task<InventoryItem?> GetInventoryItemByIdAsync(int itemId);
+        Task<int> UpsertInventoryItemAsync(InventoryItem item);
+        Task DeleteInventoryItemAsync(int itemId);
+        Task DeductInventoryStockAsync(int itemId, int quantityUsed);
+
+        // Complaint Spare Parts Operations
+        Task<IEnumerable<ComplaintSparePart>> GetSparePartsByComplaintIdAsync(int complaintId);
+        Task SaveComplaintSparePartAsync(ComplaintSparePart part);
     }
 }

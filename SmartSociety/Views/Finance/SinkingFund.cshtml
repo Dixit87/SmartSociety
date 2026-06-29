@@ -1,0 +1,500 @@
+@model dynamic
+
+@{
+    ViewData["Title"] = "Sinking Fund & Fixed Deposits";
+    var fds = (Model.FixedDeposits as IEnumerable<SmartSociety.Models.FixedDeposit>) ?? Enumerable.Empty<SmartSociety.Models.FixedDeposit>();
+    var txns = (Model.Transactions as IEnumerable<SmartSociety.Models.SinkingFundTransaction>) ?? Enumerable.Empty<SmartSociety.Models.SinkingFundTransaction>();
+    var balance = (decimal)Model.SinkingFundBalance;
+
+    var totalFdPrincipal = fds.Where(f => f.Status == "Active").Sum(f => f.PrincipalAmount);
+    var totalFdMaturity = fds.Where(f => f.Status == "Active").Sum(f => f.MaturityAmount);
+}
+
+<!-- DataTables Buttons CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" />
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-2">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item"><a href="/Finance" class="text-decoration-none">Finance</a></li>
+    <li class="breadcrumb-item active fw-bold" aria-current="page">Sinking Fund & FDs</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-piggy-bank me-2 text-primary"></i> Sinking Fund & Asset Reserve</h2>
+        <p class="text-muted mb-0">Track long-term society reserves, automatic contributions, and bank fixed deposits.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary rounded-pill px-3 fw-bold shadow-sm" onclick="openAdjustmentModal()">
+            <i class="fa-solid fa-arrows-rotate me-1"></i> Ledger Adjustment
+        </button>
+        <button class="btn btn-primary rounded-pill px-3 fw-bold shadow-sm" onclick="openFdModal()">
+            <i class="fa-solid fa-plus me-1"></i> New FD Investment
+        </button>
+    </div>
+</div>
+
+<!-- Financial Summary Cards -->
+<div class="row g-4 mb-4">
+    <!-- Sinking Fund Card -->
+    <div class="col-md-4">
+        <div class="card bg-primary bg-gradient text-white border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4 position-relative overflow-hidden">
+                <i class="fa-solid fa-vault position-absolute opacity-25" style="font-size: 8rem; top: -10px; right: -20px;"></i>
+                <h6 class="fw-semibold mb-3 opacity-75">Sinking Fund Ledger Balance</h6>
+                <h2 class="fw-bold mb-2">₹@balance.ToString("N2")</h2>
+                <div class="small fw-semibold mt-3 pt-3 border-top border-light border-opacity-25">
+                    <span class="me-3"><i class="fa-solid fa-arrow-trend-up me-1"></i> Logged Contributions: @txns.Count(t => t.Type == "Contribution")</span>
+                    <span><i class="fa-solid fa-arrow-trend-down me-1"></i> Withdrawals: @txns.Count(t => t.Type == "Withdrawal")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active FD Principal Card -->
+    <div class="col-md-4">
+        <div class="card bg-success bg-gradient text-white border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4 position-relative overflow-hidden">
+                <i class="fa-solid fa-file-shield position-absolute opacity-25" style="font-size: 8rem; top: -10px; right: -20px;"></i>
+                <h6 class="fw-semibold mb-3 opacity-75">Total Active FD Principal</h6>
+                <h2 class="fw-bold mb-2">₹@totalFdPrincipal.ToString("N2")</h2>
+                <div class="small fw-semibold mt-3 pt-3 border-top border-light border-opacity-25">
+                    <span>Invested in @fds.Count(f => f.Status == "Active") active Fixed Deposits</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active FD Maturity Card -->
+    <div class="col-md-4">
+        <div class="card bg-info bg-gradient text-white border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4 position-relative overflow-hidden">
+                <i class="fa-solid fa-chart-line position-absolute opacity-25" style="font-size: 8rem; top: -10px; right: -20px;"></i>
+                <h6 class="fw-semibold mb-3 opacity-75">Estimated Maturity Value</h6>
+                <h2 class="fw-bold mb-2">₹@totalFdMaturity.ToString("N2")</h2>
+                <div class="small fw-semibold mt-3 pt-3 border-top border-light border-opacity-25">
+                    <span>Includes accumulated compound interest</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ledger Tabs & Grids -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white border-bottom pt-3 pb-0 px-4">
+        <ul class="nav nav-tabs border-bottom-0" id="financeTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold text-primary border-0" id="fds-tab" data-bs-toggle="tab" data-bs-target="#fdsTabContent" type="button" role="tab" aria-controls="fdsTabContent" aria-selected="true">
+                    <i class="fa-solid fa-file-invoice-dollar me-1"></i> Society Fixed Deposits (FDs)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold text-dark border-0" id="ledger-tab" data-bs-toggle="tab" data-bs-target="#ledgerTabContent" type="button" role="tab" aria-controls="ledgerTabContent" aria-selected="false">
+                    <i class="fa-solid fa-book-bookmark me-1"></i> Sinking Fund Ledger
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body p-4">
+        <div class="tab-content" id="financeTabsContent">
+            <!-- FDs Tab Content -->
+            <div class="tab-pane fade show active" id="fdsTabContent" role="tabpanel" aria-labelledby="fds-tab">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border-bottom w-100" id="fdsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="fw-semibold text-muted py-3">FD Number</th>
+                                <th class="fw-semibold text-muted py-3">Bank Name</th>
+                                <th class="fw-semibold text-muted py-3 text-end">Principal</th>
+                                <th class="fw-semibold text-muted py-3 text-center">Interest</th>
+                                <th class="fw-semibold text-muted py-3">Maturity Date</th>
+                                <th class="fw-semibold text-muted py-3 text-end">Maturity Value</th>
+                                <th class="fw-semibold text-muted py-3 text-center">Status</th>
+                                <th class="fw-semibold text-muted py-3 text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var fd in fds)
+                            {
+                                <tr>
+                                    <td class="py-3 fw-bold text-dark">
+                                        <code>@fd.FdNumber</code>
+                                        @if(!string.IsNullOrEmpty(fd.Notes))
+                                        {
+                                            <i class="fa-solid fa-circle-info text-muted ms-1 small" title="@fd.Notes"></i>
+                                        }
+                                    </td>
+                                    <td>@fd.BankName</td>
+                                    <td class="text-end fw-semibold">₹@fd.PrincipalAmount.ToString("N2")</td>
+                                    <td class="text-center"><span class="badge bg-light text-primary border border-primary-subtle">@fd.InterestRate.ToString("N2")%</span></td>
+                                    <td>@fd.MaturityDate.ToString("dd MMM yyyy")</td>
+                                    <td class="text-end fw-bold text-success">₹@fd.MaturityAmount.ToString("N2")</td>
+                                    <td class="text-center">
+                                        @if(fd.Status == "Active")
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-2 rounded-pill"><i class="fa-solid fa-circle-check me-1"></i> Active</span>
+                                        }
+                                        else if (fd.Status == "Matured")
+                                        {
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-2 rounded-pill"><i class="fa-solid fa-award me-1"></i> Matured</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle px-3 py-2 rounded-pill"><i class="fa-solid fa-hand-holding-dollar me-1"></i> Liquidated</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if(fd.Status == "Active")
+                                        {
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Manage
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                                    <li><a class="dropdown-item text-primary fw-semibold" href="javascript:void(0);" onclick="updateFdStatus(@fd.FdId, 'Matured')"><i class="fa-solid fa-award me-2"></i> Mark Matured</a></li>
+                                                    <li><a class="dropdown-item text-warning fw-semibold" href="javascript:void(0);" onclick="updateFdStatus(@fd.FdId, 'Liquidated')"><i class="fa-solid fa-hand-holding-dollar me-2"></i> Liquidate Early</a></li>
+                                                </ul>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">No action</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Ledger Tab Content -->
+            <div class="tab-pane fade" id="ledgerTabContent" role="tabpanel" aria-labelledby="ledger-tab">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border-bottom w-100" id="ledgerTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="fw-semibold text-muted py-3">Date</th>
+                                <th class="fw-semibold text-muted py-3 text-center">Type</th>
+                                <th class="fw-semibold text-muted py-3">Purpose / Remarks</th>
+                                <th class="fw-semibold text-muted py-3">Reference / Txn ID</th>
+                                <th class="fw-semibold text-muted py-3 text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var txn in txns)
+                            {
+                                <tr>
+                                    <td class="py-3">@txn.TransactionDate.ToString("dd MMM yyyy, hh:mm tt")</td>
+                                    <td class="text-center">
+                                        @if (txn.Type == "Contribution")
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-2 rounded-pill"><i class="fa-solid fa-arrow-trend-up me-1"></i> Contribution</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-3 py-2 rounded-pill"><i class="fa-solid fa-arrow-trend-down me-1"></i> Withdrawal</span>
+                                        }
+                                    </td>
+                                    <td>@txn.Purpose</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(txn.ReferenceId))
+                                        {
+                                            <code>@txn.ReferenceId</code>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if(txn.Type == "Contribution")
+                                        {
+                                            <h6 class="fw-bold text-success mb-0">+₹@txn.Amount.ToString("N2")</h6>
+                                        }
+                                        else
+                                        {
+                                            <h6 class="fw-bold text-danger mb-0">-₹@txn.Amount.ToString("N2")</h6>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<!-- Add Fixed Deposit Modal -->
+<div class="modal fade" id="fdModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-primary text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-file-shield me-2"></i> Log New Fixed Deposit (FD)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="fdForm" onsubmit="event.preventDefault(); submitFd();">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">FD Number / Receipt Ref <span class="text-danger">*</span></label>
+                            <input type="text" id="fdNumber" name="fdNumber" class="form-control bg-light border-0 py-2" required placeholder="E.g., FD-991283" maxlength="100" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Bank Name <span class="text-danger">*</span></label>
+                            <input type="text" id="bankName" name="bankName" class="form-control bg-light border-0 py-2" required placeholder="E.g., SBI or HDFC Bank" maxlength="150" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted mb-1">Principal Invested Amount (₹) <span class="text-danger">*</span></label>
+                            <input type="number" id="principalAmount" name="principalAmount" class="form-control bg-light border-0 py-2" required min="1" step="0.01" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted mb-1">Interest Rate (% p.a.) <span class="text-danger">*</span></label>
+                            <input type="number" id="interestRate" name="interestRate" class="form-control bg-light border-0 py-2" required min="0.1" max="25" step="0.01" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted mb-1">Maturity Value Amount (₹) <span class="text-danger">*</span></label>
+                            <input type="number" id="maturityAmount" name="maturityAmount" class="form-control bg-light border-0 py-2" required min="1" step="0.01" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Date of Investment <span class="text-danger">*</span></label>
+                            <input type="date" id="dateInvested" name="dateInvested" class="form-control bg-light border-0 py-2" required value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Maturity Date <span class="text-danger">*</span></label>
+                            <input type="date" id="maturityDate" name="maturityDate" class="form-control bg-light border-0 py-2" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Notes / Remarks</label>
+                            <textarea id="notes" name="notes" class="form-control bg-light border-0" rows="2" placeholder="Certificate storage location or terms..."></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill fw-semibold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4 rounded-pill shadow-sm fw-bold" id="btnSubmitFd">
+                            <i class="fa-solid fa-check me-2"></i> Save FD Record
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sinking Fund Adjustment Modal -->
+<div class="modal fade" id="adjustmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-dark text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-arrows-rotate me-2 text-primary"></i> Ledger Adjustment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="adjustmentForm" onsubmit="event.preventDefault(); submitAdjustment();">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Transaction Type <span class="text-danger">*</span></label>
+                        <select id="adjType" name="type" class="form-select bg-light border-0 py-2" required>
+                            <option value="Contribution">Contribution (Add Funds)</option>
+                            <option value="Withdrawal">Withdrawal (Withdraw Funds)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Adjustment Amount (₹) <span class="text-danger">*</span></label>
+                        <input type="number" id="adjAmount" name="amount" class="form-control bg-light border-0 py-2" required min="1" step="0.01" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Purpose / Justification <span class="text-danger">*</span></label>
+                        <input type="text" id="adjPurpose" name="purpose" class="form-control bg-light border-0 py-2" required placeholder="E.g., Lift Repairing Withdrawal or Donation Credit" maxlength="255" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Reference ID / Cheque No.</label>
+                        <input type="text" id="adjRef" name="referenceId" class="form-control bg-light border-0 py-2" placeholder="Optional reference detail" maxlength="100" />
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill fw-semibold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-dark px-4 rounded-pill shadow-sm fw-bold" id="btnSubmitAdj">
+                            <i class="fa-solid fa-check me-2"></i> Record Adjustment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <!-- DataTables Export Buttons JS -->
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+    <script>
+        var fdModal, adjustmentModal;
+
+        $(document).ready(function () {
+            fdModal = new bootstrap.Modal(document.getElementById('fdModal'));
+            adjustmentModal = new bootstrap.Modal(document.getElementById('adjustmentModal'));
+
+            // Initialize FDs Table with exports
+            $('#fdsTable').DataTable({
+                "pageLength": 10,
+                "ordering": false,
+                "responsive": true,
+                "dom": '<"row align-items-center mb-3"<"col-md-6"B><"col-md-6"f>>rt<"row align-items-center mt-3"<"col-md-6"i><"col-md-6"p>>',
+                "buttons": {
+                    dom: {
+                        button: {
+                            className: 'btn btn-sm shadow-sm fw-bold'
+                        }
+                    },
+                    buttons: [
+                        { extend: 'excelHtml5', className: 'btn-success text-white me-2', text: '<i class="fa-solid fa-file-excel me-1"></i> Excel', exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6] } },
+                        { extend: 'pdfHtml5', className: 'btn-danger text-white', text: '<i class="fa-solid fa-file-pdf me-1"></i> PDF', exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6] } }
+                    ]
+                },
+                "language": {
+                    "search": "",
+                    "searchPlaceholder": "Search FDs..."
+                }
+            });
+
+            // Initialize Sinking Fund Ledger Table with exports
+            $('#ledgerTable').DataTable({
+                "pageLength": 10,
+                "ordering": false,
+                "responsive": true,
+                "dom": '<"row align-items-center mb-3"<"col-md-6"B><"col-md-6"f>>rt<"row align-items-center mt-3"<"col-md-6"i><"col-md-6"p>>',
+                "buttons": {
+                    dom: {
+                        button: {
+                            className: 'btn btn-sm shadow-sm fw-bold'
+                        }
+                    },
+                    buttons: [
+                        { extend: 'excelHtml5', className: 'btn-success text-white me-2', text: '<i class="fa-solid fa-file-excel me-1"></i> Excel', exportOptions: { columns: [0, 1, 2, 3, 4] } },
+                        { extend: 'pdfHtml5', className: 'btn-danger text-white', text: '<i class="fa-solid fa-file-pdf me-1"></i> PDF', exportOptions: { columns: [0, 1, 2, 3, 4] } }
+                    ]
+                },
+                "language": {
+                    "search": "",
+                    "searchPlaceholder": "Search ledger..."
+                }
+            });
+
+            $('.dataTables_filter input').addClass('form-control form-control-sm');
+        });
+
+        /* FD MODAL AND POST FUNCTIONS */
+        function openFdModal() {
+            $('#fdForm')[0].reset();
+            $('#dateInvested').val(new Date().toISOString().split('T')[0]);
+            fdModal.show();
+        }
+
+        function submitFd() {
+            var form = $('#fdForm');
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            $('#btnSubmitFd').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+
+            $.ajax({
+                url: '/Finance/AddFixedDeposit',
+                type: 'POST',
+                data: form.serialize() + '&__RequestVerificationToken=' + token,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmitFd').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Save FD Record');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnSubmitFd').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Save FD Record');
+                }
+            });
+        }
+
+        function updateFdStatus(fdId, status) {
+            var actionText = status === 'Matured' ? 'mark this FD as matured' : 'liquidate this FD early';
+            Swal.fire({
+                title: 'Are you sure?',
+                text: `You want to ${actionText}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, proceed!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '/Finance/UpdateFdStatus',
+                        type: 'POST',
+                        data: { fdId: fdId, status: status, __RequestVerificationToken: token },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        /* ADJUSTMENT MODAL AND POST FUNCTIONS */
+        function openAdjustmentModal() {
+            $('#adjustmentForm')[0].reset();
+            adjustmentModal.show();
+        }
+
+        function submitAdjustment() {
+            var form = $('#adjustmentForm');
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            $('#btnSubmitAdj').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...');
+
+            $.ajax({
+                url: '/Finance/RecordSinkingFundTransaction',
+                type: 'POST',
+                data: form.serialize() + '&__RequestVerificationToken=' + token,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmitAdj').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Record Adjustment');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnSubmitAdj').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Record Adjustment');
+                }
+            });
+        }
+    </script>
+}

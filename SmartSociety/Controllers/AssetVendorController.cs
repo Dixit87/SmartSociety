@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using SmartSociety.Models;
 using SmartSociety.Repositories;
 using System.IO;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartSociety.Controllers
 {
+    [Authorize(Roles = "Admin,Technician")]
     public class AssetVendorController : Controller
     {
         private readonly IAssetVendorRepository _repository;
@@ -18,8 +20,20 @@ namespace SmartSociety.Controllers
 
         public async Task<IActionResult> Index(string? activeTab = "assets")
         {
+            // Auto process due maintenance schedules
+            try
+            {
+                await _repository.ProcessDueMaintenanceSchedulesAsync();
+            }
+            catch (Exception)
+            {
+                // Soft fail on page load if database is locked or has issue
+            }
+
             var assets = await _repository.GetAllAssetsAsync();
             var vendors = await _repository.GetAllVendorsAsync();
+            var schedules = await _repository.GetMaintenanceSchedulesAsync();
+            var inventory = await _repository.GetAllInventoryItemsAsync();
 
             ViewBag.ActiveTab = activeTab;
             
@@ -30,8 +44,17 @@ namespace SmartSociety.Controllers
             var thirtyDaysFromNow = DateTime.Now.AddDays(30);
             ViewBag.ExpiringAMCs = assets.Count(a => a.AmcExpiryDate.HasValue && a.AmcExpiryDate.Value <= thirtyDaysFromNow && a.AmcExpiryDate.Value >= DateTime.Now);
 
-            // Need to pass vendors to view for the Asset AMC Vendor dropdown
+            // Additional stats for Maintenance & Inventory
+            ViewBag.TotalSchedules = schedules.Count();
+            ViewBag.ActiveSchedules = schedules.Count(s => s.IsActive);
+            ViewBag.TotalInventoryItems = inventory.Count();
+            ViewBag.LowStockItems = inventory.Count(i => i.Quantity <= i.MinStockLevel);
+
+            // Pass everything needed to ViewBag
             ViewBag.VendorList = vendors;
+            ViewBag.AssetList = assets;
+            ViewBag.Schedules = schedules;
+            ViewBag.Inventory = inventory;
 
             // Use a Tuple to pass both lists to the view
             var model = new Tuple<IEnumerable<Asset>, IEnumerable<Vendor>>(assets, vendors);
@@ -42,6 +65,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SaveVendor(Vendor vendor, IFormFile? contractFile, string? removeContract)
         {
             try
@@ -52,6 +76,14 @@ namespace SmartSociety.Controllers
                 }
                 else if (contractFile != null && contractFile.Length > 0)
                 {
+                    // Security: Validate file extension
+                    var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+                    var extension = Path.GetExtension(contractFile.FileName).ToLower();
+                    if (!allowedExtensions.Contains(extension))
+                    {
+                        return Json(new { success = false, message = "Only PDF and image files (.pdf, .jpg, .jpeg, .png) are allowed for contract document." });
+                    }
+
                     string uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "vendors");
                     if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
                     
@@ -76,6 +108,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteVendor(int vendorId)
         {
             try
@@ -93,6 +126,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SaveAsset(Asset asset, IFormFile? invoiceFile, string? removeInvoice)
         {
             try
@@ -103,6 +137,14 @@ namespace SmartSociety.Controllers
                 }
                 else if (invoiceFile != null && invoiceFile.Length > 0)
                 {
+                    // Security: Validate file extension
+                    var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+                    var extension = Path.GetExtension(invoiceFile.FileName).ToLower();
+                    if (!allowedExtensions.Contains(extension))
+                    {
+                        return Json(new { success = false, message = "Only PDF and image files (.pdf, .jpg, .jpeg, .png) are allowed for invoice document." });
+                    }
+
                     string uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "assets");
                     if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
                     
@@ -127,6 +169,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteAsset(int assetId)
         {
             try
@@ -182,6 +225,119 @@ namespace SmartSociety.Controllers
             catch (Exception)
             {
                 return Json(new { success = false, message = "Error deleting service log." });
+            }
+        }
+
+        // --- MAINTENANCE SCHEDULE ENDPOINTS ---
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveMaintenanceSchedule(MaintenanceSchedule schedule)
+        {
+            try
+            {
+                await _repository.UpsertMaintenanceScheduleAsync(schedule);
+                return Json(new { success = true, message = "Maintenance schedule saved successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error saving maintenance schedule: " + ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteMaintenanceSchedule(int scheduleId)
+        {
+            try
+            {
+                await _repository.DeleteMaintenanceScheduleAsync(scheduleId);
+                return Json(new { success = true, message = "Maintenance schedule deleted successfully!" });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Error deleting maintenance schedule." });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessDueSchedules()
+        {
+            try
+            {
+                int processedCount = await _repository.ProcessDueMaintenanceSchedulesAsync();
+                return Json(new { success = true, message = $"{processedCount} due schedule(s) processed and advanced successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error processing due schedules: " + ex.Message });
+            }
+        }
+
+        // --- INVENTORY ENDPOINTS ---
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveInventoryItem(InventoryItem item)
+        {
+            try
+            {
+                await _repository.UpsertInventoryItemAsync(item);
+                return Json(new { success = true, message = "Inventory item saved successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error saving inventory item: " + ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteInventoryItem(int itemId)
+        {
+            try
+            {
+                await _repository.DeleteInventoryItemAsync(itemId);
+                return Json(new { success = true, message = "Inventory item deleted successfully!" });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Error deleting inventory item." });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestockInventoryItem(int itemId, int quantityToAdd)
+        {
+            try
+            {
+                var item = await _repository.GetInventoryItemByIdAsync(itemId);
+                if (item == null)
+                {
+                    return Json(new { success = false, message = "Inventory item not found." });
+                }
+
+                item.Quantity += quantityToAdd;
+                await _repository.UpsertInventoryItemAsync(item);
+                return Json(new { success = true, message = "Stock replenished successfully!" });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Error restocking item." });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetInventoryItemsJson()
+        {
+            try
+            {
+                var items = await _repository.GetAllInventoryItemsAsync();
+                return Json(new { success = true, data = items });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Error fetching inventory items." });
             }
         }
     }

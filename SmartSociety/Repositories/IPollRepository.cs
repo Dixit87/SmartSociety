@@ -8,6 +8,7 @@ namespace SmartSociety.Repositories
         Task<Poll?> GetPollByIdAsync(int pollId);
         Task<int> CreatePollAsync(PollUpsertViewModel model);
         Task DeletePollAsync(int pollId);
-        Task MockVoteAsync(int pollId, int optionId);
+        Task<Dictionary<int, int>> GetUserVotesAsync(int userId);
+        Task<bool> CastVoteAsync(int pollId, int optionId, int userId);
     }
 }

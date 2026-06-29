@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using ClosedXML.Excel;
 using SmartSociety.Models;
 using SmartSociety.Repositories;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartSociety.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class FlatController : Controller
     {
         private readonly IFlatRepository _flatRepo;
@@ -74,9 +76,23 @@ namespace SmartSociety.Controllers
             {
                 try
                 {
-                    await _flatRepo.UpsertFlatAsync(vm.Flat);
-                    TempData["SuccessMessage"] = vm.Flat.FlatId == 0 ? "Flat created successfully." : "Flat updated successfully.";
-                    return RedirectToAction(nameof(Index));
+                    // Prevent duplicate block + flat number
+                    var flats = await _flatRepo.GetAllFlatsAsync();
+                    var duplicateFlat = flats.FirstOrDefault(f => 
+                        f.BlockId == vm.Flat.BlockId && 
+                        string.Equals(f.FlatNumber?.Trim(), vm.Flat.FlatNumber?.Trim(), StringComparison.OrdinalIgnoreCase) && 
+                        f.FlatId != vm.Flat.FlatId);
+
+                    if (duplicateFlat != null)
+                    {
+                        ModelState.AddModelError("Flat.FlatNumber", $"Flat number {vm.Flat.FlatNumber} already exists in this block.");
+                    }
+                    else
+                    {
+                        await _flatRepo.UpsertFlatAsync(vm.Flat);
+                        TempData["SuccessMessage"] = vm.Flat.FlatId == 0 ? "Flat created successfully." : "Flat updated successfully.";
+                        return RedirectToAction(nameof(Index));
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -92,7 +108,8 @@ namespace SmartSociety.Controllers
             });
 
             var users = await _userRepo.GetAllUsersAsync();
-            vm.UserList = users.Select(u => new SelectListItem {
+            var residentsAndOwners = users.Where(u => u.Role == "Resident" || u.Role == "Admin");
+            vm.UserList = residentsAndOwners.Select(u => new SelectListItem {
                 Text = $"{u.FullName} (ID: {u.UserId})",
                 Value = u.UserId.ToString()
             });
@@ -240,6 +257,8 @@ namespace SmartSociety.Controllers
             try
             {
                 var blocks = await _blockRepo.GetAllBlocksAsync();
+                var existingFlats = await _flatRepo.GetAllFlatsAsync();
+                var uploadedFlats = new List<(string Block, string Flat)>();
 
                 using (var stream = new MemoryStream())
                 {
@@ -247,53 +266,74 @@ namespace SmartSociety.Controllers
                     using (var workbook = new XLWorkbook(stream))
                     {
                         var worksheet = workbook.Worksheet(1);
-                        var rows = worksheet.RangeUsed().RowsUsed().Skip(1);
-
-                        foreach (var row in rows)
+                        var rangeUsed = worksheet.RangeUsed();
+                        if (rangeUsed != null)
                         {
-                            try
-                            {
-                                string blockName = row.Cell(1).GetString().Trim();
-                                string flatNo = row.Cell(2).GetString().Trim();
-                                string floorStr = row.Cell(3).GetString().Trim();
-                                string type = row.Cell(4).GetString().Trim();
-                                string areaStr = row.Cell(5).GetString().Trim();
-                                string intercom = row.Cell(6).GetString().Trim();
+                            var rows = rangeUsed.RowsUsed().Skip(1);
 
-                                if (string.IsNullOrEmpty(blockName) || string.IsNullOrEmpty(flatNo) || !int.TryParse(floorStr, out int floor) || !decimal.TryParse(areaStr, out decimal area))
+                            foreach (var row in rows)
+                            {
+                                try
+                                {
+                                    string blockName = row.Cell(1).GetString().Trim();
+                                    string flatNo = row.Cell(2).GetString().Trim();
+                                    string floorStr = row.Cell(3).GetString().Trim();
+                                    string type = row.Cell(4).GetString().Trim();
+                                    string areaStr = row.Cell(5).GetString().Trim();
+                                    string intercom = row.Cell(6).GetString().Trim();
+
+                                    if (string.IsNullOrEmpty(blockName) || string.IsNullOrEmpty(flatNo) || !int.TryParse(floorStr, out int floor) || !decimal.TryParse(areaStr, out decimal area))
+                                    {
+                                        errorCount++;
+                                        continue;
+                                    }
+
+                                    // Auto-create block if it doesn't exist
+                                    var block = blocks.FirstOrDefault(b => b.BlockName.Equals(blockName, StringComparison.OrdinalIgnoreCase));
+                                    if (block == null)
+                                    {
+                                        block = new Block { BlockName = blockName, TotalFloors = floor > 10 ? floor : 10 };
+                                        int blockId = await _blockRepo.UpsertBlockAsync(block);
+                                        block.BlockId = blockId;
+                                        // Refresh blocks collection
+                                        blocks = await _blockRepo.GetAllBlocksAsync();
+                                    }
+
+                                    // Prevent duplicates in DB or Excel sheet upload
+                                    var existsInDb = existingFlats.Any(f => 
+                                        string.Equals(f.BlockName?.Trim(), blockName, StringComparison.OrdinalIgnoreCase) && 
+                                        string.Equals(f.FlatNumber?.Trim(), flatNo, StringComparison.OrdinalIgnoreCase));
+
+                                    var existsInExcel = uploadedFlats.Any(f => 
+                                        string.Equals(f.Block, blockName, StringComparison.OrdinalIgnoreCase) && 
+                                        string.Equals(f.Flat, flatNo, StringComparison.OrdinalIgnoreCase));
+
+                                    if (existsInDb || existsInExcel)
+                                    {
+                                        errorCount++;
+                                        continue;
+                                    }
+
+                                    uploadedFlats.Add((blockName, flatNo));
+
+                                    var flat = new Flat
+                                    {
+                                        BlockId = block.BlockId,
+                                        FlatNumber = flatNo,
+                                        FloorNumber = floor,
+                                        FlatType = type,
+                                        AreaSqFt = area,
+                                        IntercomNumber = intercom,
+                                        IsActive = true
+                                    };
+
+                                    await _flatRepo.UpsertFlatAsync(flat);
+                                    successCount++;
+                                }
+                                catch
                                 {
                                     errorCount++;
-                                    continue;
                                 }
-
-                                // Auto-create block if it doesn't exist
-                                var block = blocks.FirstOrDefault(b => b.BlockName.Equals(blockName, StringComparison.OrdinalIgnoreCase));
-                                if (block == null)
-                                {
-                                    block = new Block { BlockName = blockName, TotalFloors = floor > 10 ? floor : 10 };
-                                    int blockId = await _blockRepo.UpsertBlockAsync(block);
-                                    block.BlockId = blockId;
-                                    // Refresh blocks collection
-                                    blocks = await _blockRepo.GetAllBlocksAsync();
-                                }
-
-                                var flat = new Flat
-                                {
-                                    BlockId = block.BlockId,
-                                    FlatNumber = flatNo,
-                                    FloorNumber = floor,
-                                    FlatType = type,
-                                    AreaSqFt = area,
-                                    IntercomNumber = intercom,
-                                    IsActive = true
-                                };
-
-                                await _flatRepo.UpsertFlatAsync(flat);
-                                successCount++;
-                            }
-                            catch
-                            {
-                                errorCount++;
                             }
                         }
                     }
@@ -302,7 +342,7 @@ namespace SmartSociety.Controllers
                 string msg = $"Bulk upload completed. {successCount} flats imported successfully.";
                 if (errorCount > 0)
                 {
-                    msg += $" {errorCount} rows failed or had missing required fields.";
+                    msg += $" {errorCount} rows failed or had duplicate/invalid entries.";
                 }
 
                 return Json(new { success = true, message = msg });

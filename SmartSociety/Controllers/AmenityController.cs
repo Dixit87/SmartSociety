@@ -4,9 +4,11 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SmartSociety.Models;
 using SmartSociety.Repositories;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartSociety.Controllers
 {
+    [Authorize]
     public class AmenityController : Controller
     {
         private readonly IAmenityRepository _amenityRepo;
@@ -40,6 +42,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SaveAmenity(int amenityId, string name, string description, int capacity, TimeSpan openTime, TimeSpan closeTime, decimal pricePerHour, bool isActive)
         {
             try
@@ -75,6 +78,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteAmenity(int amenityId)
         {
             try
@@ -90,6 +94,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateBooking(int amenityId, int flatId, int userId, DateTime bookingDate, TimeSpan startTime, TimeSpan endTime, string purpose, decimal totalAmount, string paymentStatus)
         {
             try
@@ -119,6 +124,7 @@ namespace SmartSociety.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateBookingStatus(int bookingId, string status, string remarks)
         {
             try
@@ -129,6 +135,114 @@ namespace SmartSociety.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, message = "Failed to update booking status: " + ex.Message });
+            }
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Resident")]
+        public async Task<IActionResult> MyBookings()
+        {
+            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdStr, out int userId))
+            {
+                var flat = await _flatRepo.GetFlatByUserIdAsync(userId);
+                if (flat != null)
+                {
+                    var bookings = await _amenityRepo.GetBookingsByFlatIdAsync(flat.FlatId);
+                    var amenities = await _amenityRepo.GetAllAmenitiesAsync();
+                    
+                    dynamic model = new ExpandoObject();
+                    model.Bookings = bookings;
+                    model.Amenities = amenities.Where(a => a.IsActive);
+                    model.Flat = flat;
+                    model.UserId = userId;
+
+                    return View(model);
+                }
+            }
+            return View(new ExpandoObject());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Resident")]
+        public async Task<IActionResult> BookAmenity(int amenityId, DateTime bookingDate, TimeSpan startTime, TimeSpan endTime, string purpose)
+        {
+            try
+            {
+                var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(userIdStr, out int userId))
+                {
+                    var flat = await _flatRepo.GetFlatByUserIdAsync(userId);
+                    if (flat == null)
+                    {
+                        return Json(new { success = false, message = "You do not have a flat assigned to book amenities." });
+                    }
+
+                    var amenities = await _amenityRepo.GetAllAmenitiesAsync();
+                    var amenity = amenities.FirstOrDefault(a => a.AmenityId == amenityId);
+                    if (amenity == null || !amenity.IsActive)
+                    {
+                        return Json(new { success = false, message = "Selected amenity is not active or available." });
+                    }
+
+                    decimal totalAmount = 0;
+                    if (amenity.PricePerHour > 0)
+                    {
+                        double durationHours = (endTime - startTime).TotalHours;
+                        if (durationHours <= 0)
+                        {
+                            return Json(new { success = false, message = "End time must be after start time." });
+                        }
+                        totalAmount = amenity.PricePerHour * (decimal)durationHours;
+                    }
+
+                    var booking = new AmenityBooking
+                    {
+                        AmenityId = amenityId,
+                        FlatId = flat.FlatId,
+                        UserId = userId,
+                        BookingDate = bookingDate,
+                        StartTime = startTime,
+                        EndTime = endTime,
+                        Purpose = purpose,
+                        TotalAmount = totalAmount,
+                        PaymentStatus = amenity.PricePerHour > 0 ? "Pending" : "Paid",
+                        Status = "Pending"
+                    };
+
+                    int bookingId = await _amenityRepo.CreateBookingAsync(booking);
+                    return Json(new { success = true, bookingId = bookingId, totalAmount = totalAmount, message = "Booking request submitted successfully." });
+                }
+                return Json(new { success = false, message = "Unauthorized access." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Failed to book amenity: " + ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Resident")]
+        public async Task<IActionResult> RecordBookingPayment(int bookingId, string paymentMode, string transactionId)
+        {
+            try
+            {
+                var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(userIdStr, out int userId))
+                {
+                    var flat = await _flatRepo.GetFlatByUserIdAsync(userId);
+                    if (flat == null) return Json(new { success = false, message = "Flat not found." });
+
+                    await _amenityRepo.UpdateBookingPaymentStatusAsync(bookingId, "Paid");
+                    return Json(new { success = true, message = "Booking payment recorded successfully." });
+                }
+                return Json(new { success = false, message = "Unauthorized access." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Failed to record payment: " + ex.Message });
             }
         }
     }

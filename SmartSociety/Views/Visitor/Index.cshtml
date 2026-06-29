@@ -36,6 +36,108 @@
     </div>
 </div>
 
+<!-- Gatekeeping Quick Actions -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="bg-white rounded-4 shadow-sm p-4 border-start border-primary border-4 h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; min-width: 50px;">
+                    <i class="fa-solid fa-key fa-lg"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-1 fs-6">Invite Verification</h5>
+                    <p class="text-muted small mb-0">Verify 6-digit invite passcodes from pre-approved guests.</p>
+                </div>
+            </div>
+            <div class="text-end">
+                <button class="btn btn-primary rounded-pill px-4 btn-sm" onclick="openVerifyInviteModal()">
+                    <i class="fa-solid fa-shield-check me-1"></i> Verify Guest Pass
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-white rounded-4 shadow-sm p-4 border-start border-warning border-4 h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-warning bg-opacity-10 text-warning-emphasis rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; min-width: 50px;">
+                    <i class="fa-solid fa-truck-ramp-box fa-lg"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-1 fs-6">Gate Delivery Log</h5>
+                    <p class="text-muted small mb-0">Record incoming courier packages and alert residents.</p>
+                </div>
+            </div>
+            <div class="text-end">
+                <button class="btn btn-warning rounded-pill px-4 btn-sm text-dark fw-semibold" onclick="openLogDeliveryModal()">
+                    <i class="fa-solid fa-box-archive me-1"></i> Log New Parcel
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-white rounded-4 shadow-sm p-4 border-start border-danger border-4 h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; min-width: 50px;">
+                    <i class="fa-solid fa-child-reaching fa-lg"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-1 fs-6">Child Safety Exit Request</h5>
+                    <p class="text-muted small mb-0">Verify unaccompanied child departures and alert parents.</p>
+                </div>
+            </div>
+            <div class="text-end">
+                <button class="btn btn-danger rounded-pill px-4 btn-sm text-white fw-semibold" onclick="openChildExitModal()">
+                    <i class="fa-solid fa-shield-cat me-1"></i> Trigger Exit Alert
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Child Exit Requests (Today) -->
+@if (ViewBag.ChildRequests != null && ((IEnumerable<SmartSociety.Models.ChildExitRequest>)ViewBag.ChildRequests).Any())
+{
+    <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 bg-light">
+        <h6 class="fw-bold mb-3 text-dark"><i class="fa-solid fa-child fa-lg me-2 text-danger"></i> Unaccompanied Child Exit Requests (Today)</h6>
+        <div class="row g-3">
+            @foreach (var req in (IEnumerable<SmartSociety.Models.ChildExitRequest>)ViewBag.ChildRequests)
+            {
+                <div class="col-md-4">
+                    <div class="bg-white rounded-4 p-3 shadow-sm border border-2 @(req.Status == "Pending" ? "border-warning" : req.Status == "Approved" ? "border-success" : "border-danger")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge @(req.Status == "Pending" ? "bg-warning-subtle text-warning-emphasis" : req.Status == "Approved" ? "bg-success-subtle text-success-emphasis" : "bg-danger-subtle text-danger-emphasis") rounded-pill px-3 py-1 fw-bold">
+                                @req.Status
+                            </span>
+                            <small class="text-muted"><i class="fa-solid fa-clock me-1"></i> @req.CreatedAt.ToString("hh:mm tt")</small>
+                        </div>
+                        <h6 class="fw-bold mb-1 text-dark">@req.ChildName</h6>
+                        <p class="text-muted small mb-2">Flat: @req.BlockName - @req.FlatNumber</p>
+                        @if(!string.IsNullOrEmpty(req.GuardRemarks))
+                        {
+                            <p class="text-muted small fst-italic mb-2">"@req.GuardRemarks"</p>
+                        }
+                        <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Parent Action:</small>
+                            @if(req.Status == "Pending")
+                            {
+                                <span class="text-warning small fw-bold"><i class="fa-solid fa-hourglass-half me-1"></i> Awaiting App Approval</span>
+                            }
+                            else if(req.Status == "Approved")
+                            {
+                                <span class="text-success small fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Exit Allowed</span>
+                            }
+                            else
+                            {
+                                <span class="text-danger small fw-bold"><i class="fa-solid fa-circle-xmark me-1"></i> Stop Child!</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
 <!-- Dashboard Summary Cards -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
@@ -84,105 +186,374 @@
     </div>
 </div>
 
+<style>
+    #pills-tab .nav-link {
+        background-color: #ffffff;
+        color: #212529;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+    }
+    #pills-tab .nav-link:hover {
+        background-color: #f8f9fa;
+        color: #000000;
+    }
+    #pills-tab .nav-link.active {
+        background-color: #0d6efd !important;
+        color: #ffffff !important;
+        border-color: #0d6efd;
+    }
+    .scanner-laser {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(to right, rgba(25, 135, 84, 0), rgba(25, 135, 84, 0.8), rgba(25, 135, 84, 0));
+        box-shadow: 0 0 10px #198754;
+        animation: scanner-sweep 2.5s linear infinite;
+        pointer-events: none;
+        z-index: 10;
+    }
+    @@keyframes scanner-sweep {
+        0% { top: 0%; }
+        50% { top: 100%; }
+        100% { top: 0%; }
+    }
+    #qr-reader {
+        border: none !important;
+    }
+    #qr-reader video {
+        object-fit: cover !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
+    #inviteVerifyTabs .nav-link {
+        color: #495057;
+        background: transparent;
+        border: none;
+    }
+    #inviteVerifyTabs .nav-link.active {
+        color: #fff !important;
+        background-color: #0d6efd !important;
+    }
+</style>
 
-<div class="bg-white rounded-4 shadow-sm p-4">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" id="visitorTable">
-            <thead class="table-light">
-                <tr>
-                    <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Visitor Info</th>
-                    <th class="text-secondary fw-semibold py-3 border-0">Visiting Flat</th>
-                    <th class="text-secondary fw-semibold py-3 border-0">In-Time</th>
-                    <th class="text-secondary fw-semibold py-3 border-0">Status</th>
-                    <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Action</th>
-                </tr>
-            </thead>
-            <tbody class="border-top-0">
-                @if (Model != null && Model.Any())
-                {
-                    foreach (var visitor in Model)
-                    {
-                        <tr class="@(visitor.IsOverstaying ? "bg-danger bg-opacity-10" : "")">
-                            <td class="py-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded-circle d-flex justify-content-center align-items-center text-muted me-3" style="width: 45px; height: 45px;">
-                                        @if(visitor.VisitorType == "Guest") { <i class="fa-solid fa-user-group fa-lg"></i> }
-                                        else if(visitor.VisitorType == "Delivery") { <i class="fa-solid fa-box fa-lg"></i> }
-                                        else if(visitor.VisitorType == "Maid/Helper") { <i class="fa-solid fa-broom fa-lg"></i> }
-                                        else { <i class="fa-solid fa-id-badge fa-lg"></i> }
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0 fw-bold text-dark">@visitor.FullName</h6>
-                                        <div class="small text-muted"><i class="fa-solid fa-phone fa-sm me-1"></i> @visitor.PhoneNumber</div>
-                                        <span class="badge bg-secondary-subtle text-secondary px-2 py-0 mt-1">@visitor.VisitorType</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-3">
-                                <div class="fw-bold text-dark">@visitor.BlockName - @visitor.FlatNumber</div>
-                                @if(!string.IsNullOrEmpty(visitor.Purpose))
-                                {
-                                    <div class="text-muted small fst-italic">"@visitor.Purpose"</div>
-                                }
-                                @if(!string.IsNullOrEmpty(visitor.VehicleNumber))
-                                {
-                                    <div class="text-muted small mt-1"><i class="fa-solid fa-car-side fa-sm me-1"></i> @visitor.VehicleNumber</div>
-                                }
-                            </td>
-                            <td class="py-3">
-                                <div class="fw-medium">@visitor.InTime.ToString("hh:mm tt")</div>
-                                <div class="small text-muted">@visitor.InTime.ToString("dd MMM yyyy")</div>
-                            </td>
-                            <td class="py-3">
-                                @if (visitor.Status == "Pending")
-                                {
-                                    <span class="badge bg-info-subtle text-info px-2 py-1"><i class="fa-solid fa-clock me-1"></i> Pending Approval</span>
-                                }
-                                else if (visitor.Status == "Inside")
-                                {
-                                    if(visitor.IsOverstaying)
-                                    {
-                                        <span class="badge bg-danger text-white px-2 py-1 shadow-sm"><i class="fa-solid fa-triangle-exclamation me-1"></i> Overstaying</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="fa-solid fa-clock me-1"></i> Inside</span>
-                                    }
-                                }
-                                else if (visitor.Status == "Rejected")
-                                {
-                                    <span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="fa-solid fa-xmark me-1"></i> Rejected</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-success-subtle text-success px-2 py-1"><i class="fa-solid fa-check-double me-1"></i> Exited</span>
-                                    <div class="small text-muted mt-1">@visitor.OutTime?.ToString("hh:mm tt")</div>
-                                }
-                            </td>
-                            <td class="py-3 text-end">
-                                @if (visitor.Status == "Pending")
-                                {
-                                    <div class="d-flex gap-1 justify-content-end">
-                                        <button class="btn btn-sm btn-success rounded-pill px-3 fw-semibold shadow-sm" onclick="approveVisitor(@visitor.VisitorId, '@visitor.FullName')" title="Approve Entry">
-                                            <i class="fa-solid fa-check"></i> Approve
-                                        </button>
-                                        <button class="btn btn-sm btn-danger rounded-pill px-3 fw-semibold shadow-sm" onclick="rejectVisitor(@visitor.VisitorId, '@visitor.FullName')" title="Reject Entry">
-                                            <i class="fa-solid fa-xmark"></i> Reject
-                                        </button>
-                                    </div>
-                                }
-                                else if (visitor.Status == "Inside")
-                                {
-                                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-semibold shadow-sm" onclick="checkoutVisitor(@visitor.VisitorId, '@visitor.FullName')">
-                                        <i class="fa-solid fa-person-walking-arrow-right me-1"></i> Checkout
-                                    </button>
-                                }
-                            </td>
+<ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-bold px-4 py-2.5 rounded-pill shadow-sm" id="pills-visitors-tab" data-bs-toggle="pill" data-bs-target="#pills-visitors" type="button" role="tab" aria-controls="pills-visitors" aria-selected="true">
+            <i class="fa-solid fa-users-viewfinder me-2"></i> Visitor Logs
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold px-4 py-2.5 rounded-pill ms-2 shadow-sm text-dark bg-white border border-light" id="pills-deliveries-tab" data-bs-toggle="pill" data-bs-target="#pills-deliveries" type="button" role="tab" aria-controls="pills-deliveries" aria-selected="false">
+            <i class="fa-solid fa-box-open me-2 text-warning"></i> Deliveries at Gate
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold px-4 py-2.5 rounded-pill ms-2 shadow-sm text-dark bg-white border border-light" id="pills-staff-tab" data-bs-toggle="pill" data-bs-target="#pills-staff" type="button" role="tab" aria-controls="pills-staff" aria-selected="false">
+            <i class="fa-solid fa-user-check me-2 text-success"></i> Daily Staff Attendance
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="pills-tabContent">
+    <div class="tab-pane fade show active" id="pills-visitors" role="tabpanel" aria-labelledby="pills-visitors-tab">
+        <div class="bg-white rounded-4 shadow-sm p-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="visitorTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Visitor Info</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Visiting Flat</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">In-Time</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Status</th>
+                            <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Action</th>
                         </tr>
-                    }
-                }
-            </tbody>
-        </table>
+                    </thead>
+                    <tbody class="border-top-0">
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var visitor in Model)
+                            {
+                                <tr class="@(visitor.IsOverstaying ? "bg-danger bg-opacity-10" : "")">
+                                    <td class="py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-light rounded-circle d-flex justify-content-center align-items-center text-muted me-3" style="width: 45px; height: 45px;">
+                                                @if(visitor.VisitorType == "Guest") { <i class="fa-solid fa-user-group fa-lg"></i> }
+                                                else if(visitor.VisitorType == "Delivery") { <i class="fa-solid fa-box fa-lg"></i> }
+                                                else if(visitor.VisitorType == "Maid/Helper") { <i class="fa-solid fa-broom fa-lg"></i> }
+                                                else { <i class="fa-solid fa-id-badge fa-lg"></i> }
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-dark">@visitor.FullName</h6>
+                                                <div class="small text-muted"><i class="fa-solid fa-phone fa-sm me-1"></i> @visitor.PhoneNumber</div>
+                                                <span class="badge bg-secondary-subtle text-secondary px-2 py-0 mt-1">@visitor.VisitorType</span>
+                                                @if(!string.IsNullOrEmpty(visitor.InviteCode))
+                                                {
+                                                    <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-0 mt-1 ms-1"><i class="fa-solid fa-key me-1"></i> Invite: @visitor.InviteCode</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">
+                                        <div class="fw-bold text-dark">@visitor.BlockName - @visitor.FlatNumber</div>
+                                        @if(!string.IsNullOrEmpty(visitor.Purpose))
+                                        {
+                                            <div class="text-muted small fst-italic">"@visitor.Purpose"</div>
+                                        }
+                                        @if(!string.IsNullOrEmpty(visitor.VehicleNumber))
+                                        {
+                                            <div class="text-muted small mt-1"><i class="fa-solid fa-car-side fa-sm me-1"></i> @visitor.VehicleNumber</div>
+                                        }
+                                    </td>
+                                    <td class="py-3">
+                                        <div class="fw-medium">@visitor.InTime.ToString("hh:mm tt")</div>
+                                        <div class="small text-muted">@visitor.InTime.ToString("dd MMM yyyy")</div>
+                                    </td>
+                                    <td class="py-3">
+                                        @if (visitor.Status == "Pending")
+                                        {
+                                            <span class="badge bg-info-subtle text-info px-2 py-1"><i class="fa-solid fa-clock me-1"></i> Pending Approval</span>
+                                        }
+                                        else if (visitor.Status == "Inside")
+                                        {
+                                            if(visitor.IsOverstaying)
+                                            {
+                                                <span class="badge bg-danger text-white px-2 py-1 shadow-sm"><i class="fa-solid fa-triangle-exclamation me-1"></i> Overstaying</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="fa-solid fa-clock me-1"></i> Inside</span>
+                                            }
+                                        }
+                                        else if (visitor.Status == "Rejected")
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="fa-solid fa-xmark me-1"></i> Rejected</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success-subtle text-success px-2 py-1"><i class="fa-solid fa-check-double me-1"></i> Exited</span>
+                                            <div class="small text-muted mt-1">@visitor.OutTime?.ToString("hh:mm tt")</div>
+                                        }
+                                    </td>
+                                    <td class="py-3 text-end">
+                                        @if (visitor.Status == "Pending")
+                                        {
+                                            <div class="d-flex gap-1 justify-content-end">
+                                                <button class="btn btn-sm btn-success rounded-pill px-3 fw-semibold shadow-sm" onclick="approveVisitor(@visitor.VisitorId, '@visitor.FullName')" title="Approve Entry">
+                                                    <i class="fa-solid fa-check"></i> Approve
+                                                </button>
+                                                <button class="btn btn-sm btn-danger rounded-pill px-3 fw-semibold shadow-sm" onclick="rejectVisitor(@visitor.VisitorId, '@visitor.FullName')" title="Reject Entry">
+                                                    <i class="fa-solid fa-xmark"></i> Reject
+                                                </button>
+                                            </div>
+                                        }
+                                        else if (visitor.Status == "Inside")
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-semibold shadow-sm" onclick="checkoutVisitor(@visitor.VisitorId, '@visitor.FullName')">
+                                                <i class="fa-solid fa-person-walking-arrow-right me-1"></i> Checkout
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tab-pane fade" id="pills-deliveries" role="tabpanel" aria-labelledby="pills-deliveries-tab">
+        <div class="bg-white rounded-4 shadow-sm p-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="deliveryTable" style="width:100%">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Courier Info</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Visiting Flat</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Delivery Agent</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Receipt Photo</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Logged At</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Status</th>
+                            <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Collected At</th>
+                        </tr>
+                    </thead>
+                    <tbody class="border-top-0">
+                        @if (ViewBag.Deliveries != null && ((IEnumerable<SmartSociety.Models.Delivery>)ViewBag.Deliveries).Any())
+                        {
+                            foreach (var delivery in (IEnumerable<SmartSociety.Models.Delivery>)ViewBag.Deliveries)
+                            {
+                                <tr>
+                                    <td class="py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-warning bg-opacity-10 rounded-circle d-flex justify-content-center align-items-center text-warning me-3" style="width: 45px; height: 45px;">
+                                                <i class="fa-solid fa-box fa-lg"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-dark">@delivery.Company</h6>
+                                                <span class="badge bg-warning-subtle text-warning-emphasis px-2 py-0 mt-1">Parcel</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">
+                                        <div class="fw-bold text-dark">@delivery.BlockName - @delivery.FlatNumber</div>
+                                        <div class="text-muted small">Resident: @delivery.ResidentName</div>
+                                    </td>
+                                    <td class="py-3">
+                                        <div class="fw-semibold text-dark">@delivery.DeliveryAgentName</div>
+                                        <div class="small text-muted"><i class="fa-solid fa-phone fa-sm me-1"></i> @delivery.DeliveryAgentPhone</div>
+                                    </td>
+                                    <td class="py-3">
+                                        @if (!string.IsNullOrEmpty(delivery.ReceiptPhoto))
+                                        {
+                                            <a href="@delivery.ReceiptPhoto" target="_blank" class="btn btn-sm btn-light border rounded-pill px-3">
+                                                <i class="fa-solid fa-image me-1 text-primary"></i> View Photo
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small fst-italic">No Photo</span>
+                                        }
+                                    </td>
+                                    <td class="py-3">
+                                        <div class="fw-medium">@delivery.LoggedAt.ToString("hh:mm tt")</div>
+                                        <div class="small text-muted">@delivery.LoggedAt.ToString("dd MMM yyyy")</div>
+                                    </td>
+                                    <td class="py-3">
+                                        @if (delivery.Status == "LoggedAtGate")
+                                        {
+                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning-subtle px-2 py-1"><i class="fa-solid fa-clock me-1"></i> At Gate</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-check-double me-1"></i> Collected</span>
+                                        }
+                                    </td>
+                                    <td class="py-3 text-end">
+                                        @if (delivery.CollectedAt.HasValue)
+                                        {
+                                            <div class="fw-medium text-dark">@delivery.CollectedAt.Value.ToString("hh:mm tt")</div>
+                                            <div class="small text-muted">@delivery.CollectedAt.Value.ToString("dd MMM yyyy")</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small fst-italic">Awaiting Collection</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="pills-staff" role="tabpanel" aria-labelledby="pills-staff-tab">
+        <div class="bg-white rounded-4 shadow-sm p-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="staffTable" style="width:100%">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Staff Member</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Role</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Shift</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Verification Status</th>
+                            <th class="text-secondary fw-semibold py-3 border-0">Today's Status</th>
+                            <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Attendance Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="border-top-0">
+                        @if (ViewBag.StaffWithAttendance != null)
+                        {
+                            foreach (var item in ViewBag.StaffWithAttendance)
+                            {
+                                var staff = item.Staff;
+                                var attendance = item.TodayAttendance;
+                                <tr>
+                                    <td class="py-3">
+                                        <div class="d-flex align-items-center">
+                                            @if (!string.IsNullOrEmpty(staff.PhotoPath))
+                                            {
+                                                <img src="@staff.PhotoPath" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover;" alt="@staff.FullName" />
+                                            }
+                                            else
+                                            {
+                                                <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 45px; height: 45px; min-width: 45px;">
+                                                    <i class="fa-solid fa-user fa-lg"></i>
+                                                </div>
+                                            }
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-dark">@staff.FullName</h6>
+                                                <div class="small text-muted"><i class="fa-solid fa-phone fa-sm me-1"></i> @staff.ContactNumber</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">
+                                        <span class="badge bg-info bg-opacity-10 text-info px-2 py-1">@staff.Role</span>
+                                    </td>
+                                    <td class="py-3">
+                                        <div class="fw-medium text-dark">
+                                            @staff.ShiftStart.ToString(@"hh\:mm") - @staff.ShiftEnd.ToString(@"hh\:mm")
+                                        </div>
+                                    </td>
+                                    <td class="py-3">
+                                        @if (staff.IsVerified)
+                                        {
+                                            <span class="text-success fw-semibold"><i class="fa-solid fa-circle-check me-1"></i> Verified</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted"><i class="fa-solid fa-circle-minus me-1"></i> Pending</span>
+                                        }
+                                    </td>
+                                    <td class="py-3">
+                                        @if (attendance == null)
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary px-2 py-1"><i class="fa-solid fa-circle-exclamation me-1"></i> Not Present</span>
+                                        }
+                                        else if (attendance.CheckInTime != null && attendance.CheckOutTime == null)
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-right-to-bracket me-1"></i> In (Checked-in @(((TimeSpan)attendance.CheckInTime).ToString(@"hh\:mm")))</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1"><i class="fa-solid fa-right-from-bracket me-1"></i> Out (Checked-out @(((TimeSpan)attendance.CheckOutTime).ToString(@"hh\:mm")))</span>
+                                        }
+                                    </td>
+                                    <td class="py-3 text-end">
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            @if (attendance == null)
+                                            {
+                                                <button class="btn btn-sm btn-success rounded-pill px-3 fw-semibold shadow-sm" onclick="clockStaff(@staff.StaffId, 'IN')">
+                                                    <i class="fa-solid fa-right-to-bracket me-1"></i> Clock In
+                                                </button>
+                                            }
+                                            else if (attendance.CheckInTime != null && attendance.CheckOutTime == null)
+                                            {
+                                                <button class="btn btn-sm btn-danger rounded-pill px-3 fw-semibold shadow-sm" onclick="clockStaff(@staff.StaffId, 'OUT')">
+                                                    <i class="fa-solid fa-right-from-bracket me-1"></i> Clock Out
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-semibold" disabled>
+                                                    <i class="fa-solid fa-check me-1"></i> Completed
+                                                </button>
+                                            }
+                                            <button class="btn btn-sm btn-light border rounded-pill px-3 fw-semibold" onclick="viewStaffAttendanceHistory(@staff.StaffId, '@staff.FullName')">
+                                                <i class="fa-solid fa-clock-rotate-left me-1"></i> Log
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -242,15 +613,210 @@
     </div>
 </div>
 
+<!-- Verify Invite Code Modal -->
+<div class="modal fade" id="verifyInviteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-primary text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-key me-2"></i> Verify Guest Invite Code</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <!-- Navigation Tabs inside Modal -->
+                <ul class="nav nav-pills nav-fill mb-4 p-1 bg-light rounded-pill border" id="inviteVerifyTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold py-2 rounded-pill" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-pane" type="button" role="tab" aria-controls="manual-pane" aria-selected="true">
+                            <i class="fa-solid fa-keyboard me-1"></i> Manual Code
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold py-2 rounded-pill" id="qr-tab" data-bs-toggle="pill" data-bs-target="#qr-pane" type="button" role="tab" aria-controls="qr-pane" aria-selected="false">
+                            <i class="fa-solid fa-qrcode me-1"></i> Scan QR Code
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="inviteVerifyTabsContent">
+                    <!-- Manual Entry Pane -->
+                    <div class="tab-pane fade show active" id="manual-pane" role="tabpanel" aria-labelledby="manual-tab">
+                        <form id="verifyInviteForm" onsubmit="event.preventDefault(); submitInviteVerification();">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small text-muted mb-1">Enter 6-Digit Invite Pass Code <span class="text-danger">*</span></label>
+                                <input type="text" id="InviteCodeInput" class="form-control bg-light border-0 text-center fw-bold fs-4" style="letter-spacing: 5px;" required maxlength="6" placeholder="123456" />
+                            </div>
+                            <div class="mt-4 pt-3 border-top text-end">
+                                <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary px-5 rounded-pill shadow-sm fw-semibold" id="btnVerifySubmit">
+                                    <i class="fa-solid fa-shield-check me-2"></i> Verify & Approve Entry
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- QR Scan Pane -->
+                    <div class="tab-pane fade" id="qr-pane" role="tabpanel" aria-labelledby="qr-tab">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted mb-1">Select Camera</label>
+                            <select id="qr-camera-select" class="form-select bg-light border-0 rounded-pill">
+                                <option value="">-- Accessing Cameras... --</option>
+                            </select>
+                        </div>
+                        <div class="position-relative mx-auto border rounded-4 bg-dark overflow-hidden mb-3" style="max-width: 320px; aspect-ratio: 1/1; box-shadow: inset 0 0 20px rgba(0,0,0,0.6);">
+                            <!-- Scanning Container -->
+                            <div id="qr-reader" style="width: 100%; height: 100%;"></div>
+                            <!-- Glowing Laser Line Overlay -->
+                            <div class="scanner-laser" id="scanner-laser" style="display: none;"></div>
+                        </div>
+                        <div class="d-flex justify-content-center gap-2 mb-2">
+                            <button type="button" class="btn btn-success btn-sm rounded-pill px-4" id="btnStartScan" onclick="startQRScanner()">
+                                <i class="fa-solid fa-video me-1"></i> Start Camera
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btnStopScan" onclick="stopQRScanner()" disabled>
+                                <i class="fa-solid fa-video-slash me-1"></i> Stop Camera
+                            </button>
+                        </div>
+                        <div class="text-center text-muted small mt-3">
+                            <i class="fa-solid fa-info-circle me-1 text-primary"></i> Present guest's invite QR code to verify instantly.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log New Delivery Modal -->
+<div class="modal fade" id="logDeliveryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-warning text-dark rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-truck-ramp-box me-2"></i> Log Incoming Delivery</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="deliveryForm" onsubmit="event.preventDefault(); submitDeliveryLog();" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Courier Company / Brand <span class="text-danger">*</span></label>
+                            <input type="text" id="DelivCompany" name="company" class="form-control bg-light border-0" required placeholder="e.g. Amazon, Flipkart, Zomato, Swiggy" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Visiting Flat <span class="text-danger">*</span></label>
+                            <select id="DelivFlatId" name="flatId" class="form-select bg-light border-0" required>
+                                <option value="">-- Select Flat --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Delivery Agent Name <span class="text-danger">*</span></label>
+                            <input type="text" id="DelivAgentName" name="deliveryAgentName" class="form-control bg-light border-0" required placeholder="e.g. Suresh Kumar" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Delivery Agent Contact <span class="text-danger">*</span></label>
+                            <input type="text" id="DelivAgentPhone" name="deliveryAgentPhone" class="form-control bg-light border-0" required maxlength="15" placeholder="e.g. 9876543210" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-muted mb-1">Receipt / Package Photo (Optional)</label>
+                            <input type="file" id="DelivReceiptPhoto" name="receiptPhoto" class="form-control bg-light border-0" accept=".pdf,.jpg,.jpeg,.png" />
+                            <div class="form-text text-muted">Allowed formats: .pdf, .jpg, .jpeg, .png (Max: 5MB)</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning px-5 rounded-pill shadow-sm fw-semibold text-dark" id="btnSubmitDelivery">
+                            <i class="fa-solid fa-box-archive me-2"></i> Log & Notify Resident
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Child Safety Exit Alert Modal -->
+<div class="modal fade" id="childExitModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-danger text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-child me-2"></i> Child Safety Gate Pass</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="childExitForm" onsubmit="event.preventDefault(); submitChildExitRequest();">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Select Flat <span class="text-danger">*</span></label>
+                        <select id="ChildExitFlatId" name="flatId" class="form-select bg-light border-0" required>
+                            <option value="">-- Select Flat --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Select Child <span class="text-danger">*</span></label>
+                        <select id="ChildExitChildId" name="familyMemberId" class="form-select bg-light border-0" required>
+                            <option value="">-- Select Flat First --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Guard Remarks / Observations (Optional)</label>
+                        <textarea id="ChildExitRemarks" name="guardRemarks" class="form-control bg-light border-0" rows="3" placeholder="e.g. Child is alone trying to go outside with a bicycle..."></textarea>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger px-5 rounded-pill shadow-sm fw-semibold" id="btnSubmitChildExit">
+                            <i class="fa-solid fa-shield-cat me-2"></i> Trigger Exit Alert
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Staff Attendance History Modal -->
+<div class="modal fade" id="staffHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-info text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-clock-rotate-left me-2"></i> Attendance History: <span id="historyStaffName"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white" style="max-height: 400px; overflow-y: auto;">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>In Time</th>
+                                <th>Out Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staffHistoryTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @Html.AntiForgeryToken()
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     
     <script>
         var entryModal;
+        var verifyInviteModal;
+        var logDeliveryModal;
+        var childExitModal;
+        var staffHistoryModal;
+        var html5QrCode = null;
 
         $(document).ready(function () {
             $('#visitorTable').DataTable({
@@ -262,9 +828,64 @@
                     "searchPlaceholder": "Search visitors..."
                 }
             });
+
+            $('#deliveryTable').DataTable({
+                "pageLength": 10,
+                "ordering": false,
+                "responsive": true,
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search deliveries..."
+                }
+            });
+
+            $('#staffTable').DataTable({
+                "pageLength": 10,
+                "ordering": false,
+                "responsive": true,
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search staff..."
+                }
+            });
             
             entryModal = new bootstrap.Modal(document.getElementById('newEntryModal'));
+            verifyInviteModal = new bootstrap.Modal(document.getElementById('verifyInviteModal'));
+            logDeliveryModal = new bootstrap.Modal(document.getElementById('logDeliveryModal'));
+            childExitModal = new bootstrap.Modal(document.getElementById('childExitModal'));
+            staffHistoryModal = new bootstrap.Modal(document.getElementById('staffHistoryModal'));
+
+            // Clean up QR Scanner when modal is closed
+            document.getElementById('verifyInviteModal').addEventListener('hidden.bs.modal', function () {
+                stopQRScanner();
+            });
+
+            // Clean up QR Scanner when switching to Manual tab
+            document.getElementById('manual-tab').addEventListener('shown.bs.tab', function () {
+                stopQRScanner();
+            });
+
+            // Automatically query cameras and start scanner when switching to Scan tab
+            document.getElementById('qr-tab').addEventListener('shown.bs.tab', function () {
+                initAndStartQRScanner();
+            });
+
+            $('#qr-camera-select').change(function() {
+                if (html5QrCode && html5QrCode.isScanning) {
+                    html5QrCode.stop().then(() => {
+                        startQRScanner();
+                    });
+                } else {
+                    startQRScanner();
+                }
+            });
+            
             loadFlats();
+
+            $('#ChildExitFlatId').change(function() {
+                var flatId = $(this).val();
+                loadChildrenForFlat(flatId);
+            });
         });
 
         function loadFlats() {
@@ -273,10 +894,22 @@
                 type: 'GET',
                 success: function (res) {
                     var select = $('#FlatId');
+                    var delivSelect = $('#DelivFlatId');
+                    var childExitSelect = $('#ChildExitFlatId');
+                    
                     select.empty();
+                    delivSelect.empty();
+                    childExitSelect.empty();
+                    
                     select.append('<option value="">-- Select Flat --</option>');
+                    delivSelect.append('<option value="">-- Select Flat --</option>');
+                    childExitSelect.append('<option value="">-- Select Flat --</option>');
+                    
                     res.forEach(function (f) {
-                        select.append(`<option value="${f.value}">${f.text}</option>`);
+                        var option = `<option value="${f.value}">${f.text}</option>`;
+                        select.append(option);
+                        delivSelect.append(option);
+                        childExitSelect.append(option);
                     });
                 }
             });
@@ -285,6 +918,210 @@
         function openNewEntryModal() {
             $('#entryForm')[0].reset();
             entryModal.show();
+        }
+
+        function openVerifyInviteModal() {
+            $('#verifyInviteForm')[0].reset();
+            if (document.getElementById('manual-tab')) {
+                var manualTab = new bootstrap.Tab(document.getElementById('manual-tab'));
+                manualTab.show();
+            }
+            stopQRScanner();
+            verifyInviteModal.show();
+        }
+
+        function openLogDeliveryModal() {
+            $('#deliveryForm')[0].reset();
+            logDeliveryModal.show();
+        }
+
+        function openChildExitModal() {
+            $('#childExitForm')[0].reset();
+            $('#ChildExitChildId').empty().append('<option value="">-- Select Flat First --</option>');
+            childExitModal.show();
+        }
+
+        function loadChildrenForFlat(flatId) {
+            var select = $('#ChildExitChildId');
+            select.empty();
+            select.append('<option value="">Loading children...</option>');
+            if (!flatId) {
+                select.empty();
+                select.append('<option value="">-- Select Flat First --</option>');
+                return;
+            }
+            $.ajax({
+                url: '/Visitor/GetChildrenForFlat',
+                type: 'GET',
+                data: { flatId: flatId },
+                success: function (res) {
+                    select.empty();
+                    if (res.success) {
+                        if (res.data.length === 0) {
+                            select.append('<option value="">No children registered for this flat</option>');
+                        } else {
+                            select.append('<option value="">-- Select Child --</option>');
+                            res.data.forEach(function (child) {
+                                select.append(`<option value="${child.familyMemberId}">${child.fullName}</option>`);
+                            });
+                        }
+                    } else {
+                        select.append('<option value="">Error loading children</option>');
+                    }
+                },
+                error: function() {
+                    select.empty();
+                    select.append('<option value="">Error loading children</option>');
+                }
+            });
+        }
+
+        function submitChildExitRequest() {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var flatId = $('#ChildExitFlatId').val();
+            var familyMemberId = $('#ChildExitChildId').val();
+            var guardRemarks = $('#ChildExitRemarks').val();
+
+            if (!flatId || !familyMemberId) {
+                Swal.fire('Error', 'Please select both Flat and Child.', 'error');
+                return;
+            }
+
+            $('#btnSubmitChildExit').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Logging...');
+
+            $.ajax({
+                url: '/Visitor/LogChildExitRequest',
+                type: 'POST',
+                data: {
+                    flatId: flatId,
+                    familyMemberId: familyMemberId,
+                    guardRemarks: guardRemarks,
+                    __RequestVerificationToken: token
+                },
+                success: function (res) {
+                    if (res.success) {
+                        childExitModal.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Exit Request Logged!',
+                            text: res.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmitChildExit').prop('disabled', false).html('<i class="fa-solid fa-shield-cat me-2"></i> Trigger Exit Alert');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnSubmitChildExit').prop('disabled', false).html('<i class="fa-solid fa-shield-cat me-2"></i> Trigger Exit Alert');
+                }
+            });
+        }
+
+        function clockStaff(staffId, action) {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var actionText = action === 'IN' ? 'Clock In' : 'Clock Out';
+            
+            Swal.fire({
+                title: `${actionText} Staff`,
+                text: `Are you sure you want to ${actionText.toLowerCase()} this staff member?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: action === 'IN' ? '#198754' : '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Confirm'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/Staff/LogAttendance',
+                        type: 'POST',
+                        data: {
+                            id: staffId,
+                            logType: action,
+                            __RequestVerificationToken: token
+                        },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: res.message,
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Error', 'Failed to log attendance.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function viewStaffAttendanceHistory(staffId, staffName) {
+            $('#historyStaffName').text(staffName);
+            var tbody = $('#staffHistoryTableBody');
+            tbody.empty();
+            tbody.append('<tr><td colspan="3" class="text-center py-3"><i class="fa-solid fa-spinner fa-spin me-2"></i> Loading history...</td></tr>');
+            staffHistoryModal.show();
+
+            $.ajax({
+                url: '/Staff/GetAttendanceHistory',
+                type: 'GET',
+                data: { id: staffId },
+                success: function (res) {
+                    tbody.empty();
+                    if (res.success) {
+                        if (res.data.length === 0) {
+                            tbody.append('<tr><td colspan="3" class="text-center text-muted py-3">No attendance records found.</td></tr>');
+                        } else {
+                            res.data.forEach(function (log) {
+                                var dateObj = new Date(log.date);
+                                var formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                
+                                var checkInStr = log.checkInTime ? formatTimeSpan(log.checkInTime) : '<span class="text-muted">-</span>';
+                                var checkOutStr = log.checkOutTime ? formatTimeSpan(log.checkOutTime) : '<span class="text-muted">-</span>';
+                                
+                                tbody.append(`
+                                    <tr>
+                                        <td><strong>${formattedDate}</strong></td>
+                                        <td><span class="text-success fw-semibold"><i class="fa-solid fa-right-to-bracket me-1"></i> ${checkInStr}</span></td>
+                                        <td><span class="text-danger fw-semibold"><i class="fa-solid fa-right-from-bracket me-1"></i> ${checkOutStr}</span></td>
+                                    </tr>
+                                `);
+                            });
+                        }
+                    } else {
+                        tbody.append(`<tr><td colspan="3" class="text-center text-danger py-3">${res.message}</td></tr>`);
+                    }
+                },
+                error: function () {
+                    tbody.empty();
+                    tbody.append('<tr><td colspan="3" class="text-center text-danger py-3">Failed to retrieve attendance history.</td></tr>');
+                }
+            });
+        }
+
+        function formatTimeSpan(timeSpan) {
+            if (!timeSpan) return '-';
+            var parts = timeSpan.split(':');
+            if (parts.length < 2) return timeSpan;
+            var hours = parseInt(parts[0], 10);
+            var minutes = parts[1];
+            var ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            var formattedHours = hours < 10 ? '0' + hours : hours;
+            return formattedHours + ':' + minutes + ' ' + ampm;
         }
 
         function submitEntry() {
@@ -324,6 +1161,188 @@
                 error: function () {
                     Swal.fire('Error', 'An unexpected error occurred.', 'error');
                     $('#btnSubmit').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Allow Entry');
+                }
+            });
+        }
+
+        function submitInviteVerification() {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var code = $('#InviteCodeInput').val();
+
+            $('#btnVerifySubmit').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Verifying...');
+
+            $.ajax({
+                url: '/Visitor/VerifyInvite',
+                type: 'POST',
+                data: {
+                    code: code,
+                    __RequestVerificationToken: token
+                },
+                success: function (res) {
+                    if (res.success) {
+                        verifyInviteModal.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Invite Verified!',
+                            text: res.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Verification Failed', res.message, 'error');
+                        $('#btnVerifySubmit').prop('disabled', false).html('<i class="fa-solid fa-shield-check me-2"></i> Verify & Approve Entry');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnVerifySubmit').prop('disabled', false).html('<i class="fa-solid fa-shield-check me-2"></i> Verify & Approve Entry');
+                }
+            });
+        }
+
+        function initAndStartQRScanner() {
+            var select = $('#qr-camera-select');
+            select.html('<option value="">Accessing cameras...</option>');
+            
+            Html5Qrcode.getCameras().then(devices => {
+                select.empty();
+                if (devices && devices.length) {
+                    devices.forEach(device => {
+                        select.append(`<option value="${device.id}">${device.label || 'Camera ' + (select.children().length + 1)}</option>`);
+                    });
+                    
+                    // Auto-start scanner
+                    startQRScanner();
+                } else {
+                    select.html('<option value="">No cameras found</option>');
+                    Swal.fire('No Camera Detected', 'We could not find any cameras on this device.', 'warning');
+                }
+            }).catch(err => {
+                console.error("Error getting cameras: ", err);
+                select.html('<option value="">Permission denied / Error</option>');
+                Swal.fire('Camera Permission Error', 'Please grant camera access permission to scan QR codes.', 'error');
+            });
+        }
+
+        function startQRScanner() {
+            var cameraId = $('#qr-camera-select').val();
+            if (!cameraId) {
+                Swal.fire('Camera Error', 'Please select a valid camera.', 'error');
+                return;
+            }
+            if (html5QrCode === null) {
+                html5QrCode = new Html5Qrcode("qr-reader");
+            }
+            
+            $('#scanner-laser').show();
+            $('#btnStartScan').prop('disabled', true);
+            $('#btnStopScan').prop('disabled', false);
+
+            html5QrCode.start(
+                cameraId, 
+                {
+                    fps: 10,
+                    qrbox: { width: 220, height: 220 }
+                },
+                (decodedText, decodedResult) => {
+                    // Try to beep
+                    try {
+                        if (typeof AudioContext !== "undefined" || typeof webkitAudioContext !== "undefined") {
+                            var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                            var oscillator = audioCtx.createOscillator();
+                            var gainNode = audioCtx.createGain();
+                            oscillator.connect(gainNode);
+                            gainNode.connect(audioCtx.destination);
+                            oscillator.type = "sine";
+                            oscillator.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                            gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                            oscillator.start();
+                            oscillator.stop(audioCtx.currentTime + 0.12);
+                        }
+                    } catch (e) {
+                        console.log("Audio feedback error: ", e);
+                    }
+                    
+                    stopQRScanner();
+                    
+                    $('#InviteCodeInput').val(decodedText);
+                    
+                    // Switch back to manual tab to show the code being submitted
+                    var manualTab = new bootstrap.Tab(document.getElementById('manual-tab'));
+                    manualTab.show();
+                    
+                    submitInviteVerification();
+                },
+                (errorMessage) => {
+                    // parse error, ignore
+                })
+                .catch((err) => {
+                    console.error("Unable to start scanning: ", err);
+                    Swal.fire('Scan Error', 'Unable to start camera. Please check permissions.', 'error');
+                    $('#scanner-laser').hide();
+                    $('#btnStartScan').prop('disabled', false);
+                    $('#btnStopScan').prop('disabled', true);
+                });
+        }
+
+        function stopQRScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    $('#scanner-laser').hide();
+                    $('#btnStartScan').prop('disabled', false);
+                    $('#btnStopScan').prop('disabled', true);
+                }).catch(err => {
+                    console.error("Failed to stop scanner: ", err);
+                });
+            } else {
+                $('#scanner-laser').hide();
+                $('#btnStartScan').prop('disabled', false);
+                $('#btnStopScan').prop('disabled', true);
+            }
+        }
+
+        function submitDeliveryLog() {
+            var form = $('#deliveryForm')[0];
+            var formData = new FormData(form);
+
+            // Ensure Anti-Forgery Token is appended to FormData
+            if (!formData.has('__RequestVerificationToken')) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                if (token) {
+                    formData.append('__RequestVerificationToken', token);
+                }
+            }
+
+            $('#btnSubmitDelivery').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Logging...');
+
+            $.ajax({
+                url: '/Visitor/LogDelivery',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        logDeliveryModal.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Delivery Logged!',
+                            text: res.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Failed to Log', res.message, 'error');
+                        $('#btnSubmitDelivery').prop('disabled', false).html('<i class="fa-solid fa-box-archive me-2"></i> Log & Notify Resident');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnSubmitDelivery').prop('disabled', false).html('<i class="fa-solid fa-box-archive me-2"></i> Log & Notify Resident');
                 }
             });
         }

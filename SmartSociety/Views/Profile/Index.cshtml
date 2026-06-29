@@ -1,0 +1,394 @@
+@model SmartSociety.Models.ProfileViewModel
+@{
+    ViewData["Title"] = "Profile & Family Settings";
+}
+
+<div class="container-fluid py-4">
+    <!-- Feedback Alerts -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success border-0 shadow-sm rounded-4 alert-dismissible fade show mb-4" role="alert">
+            <i class="fa-solid fa-circle-check me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger border-0 shadow-sm rounded-4 alert-dismissible fade show mb-4" role="alert">
+            <i class="fa-solid fa-circle-xmark me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- LEFT COLUMN: Profile Details & Password Update -->
+        <div class="col-lg-5">
+            <!-- Profile Info Card -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <form asp-action="UpdateProfile" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <div class="text-center mb-4">
+                            <!-- Avatar upload preview container -->
+                            <div class="position-relative d-inline-block">
+                                <img id="profilePreview" src="@(string.IsNullOrEmpty(Model.UserInfo.ProfilePicture) ? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(Model.UserInfo.FullName)}&size=120&background=0D6EFD&color=fff&bold=true" : Model.UserInfo.ProfilePicture)" 
+                                     alt="Avatar" class="rounded-circle shadow-sm border border-4 border-white" style="width: 120px; height: 120px; object-fit: cover;">
+                                <label for="profileImage" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2 shadow-sm cursor-pointer hover-scale transition-all" style="width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;">
+                                    <i class="fa-solid fa-camera"></i>
+                                    <input type="file" id="profileImage" name="profileImage" accept="image/*" class="d-none">
+                                </label>
+                            </div>
+                            <h4 class="fw-bold text-dark mt-3 mb-1">@Model.UserInfo.FullName</h4>
+                            <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-1.5 fw-semibold mb-2">@Model.UserInfo.Role</span>
+                            <div>
+                                <span class="text-secondary small"><i class="fa-solid fa-house-chimney me-1"></i> Flat: <strong>@Model.UserInfo.FlatNumber</strong></span>
+                            </div>
+                        </div>
+
+                        <hr class="my-4 opacity-50">
+
+                        <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-id-card text-primary me-2"></i> Personal Details</h5>
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-secondary fw-semibold small">Full Name</label>
+                            <input type="text" class="form-control bg-light" value="@Model.UserInfo.FullName" readonly title="Names are managed by the admin registry.">
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="UserInfo.PhoneNumber" class="form-label text-secondary fw-semibold small">Phone Number</label>
+                            <input asp-for="UserInfo.PhoneNumber" class="form-control rounded-3 border-secondary-subtle" required placeholder="Enter phone number">
+                            <span asp-validation-for="UserInfo.PhoneNumber" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="UserInfo.Email" class="form-label text-secondary fw-semibold small">Email Address</label>
+                            <input asp-for="UserInfo.Email" type="email" class="form-control rounded-3 border-secondary-subtle" placeholder="Enter email address">
+                            <span asp-validation-for="UserInfo.Email" class="text-danger small"></span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary rounded-3 w-100 py-2.5 fw-bold shadow-sm transition-all hover-scale">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Save Profile Details
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Password Security Card -->
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-shield-halved text-primary me-2"></i> Update Security Password</h5>
+                    <form asp-action="ChangePassword" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label asp-for="CurrentPassword" class="form-label text-secondary fw-semibold small">Current Password</label>
+                            <div class="input-group">
+                                <input asp-for="CurrentPassword" type="password" class="form-control rounded-start-3 border-secondary-subtle" required placeholder="Enter current password">
+                                <button class="btn btn-outline-secondary toggle-pass border-secondary-subtle" type="button"><i class="fa-regular fa-eye"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="NewPassword" class="form-label text-secondary fw-semibold small">New Password</label>
+                            <div class="input-group">
+                                <input asp-for="NewPassword" type="password" class="form-control rounded-start-3 border-secondary-subtle" required placeholder="Min 6 characters">
+                                <button class="btn btn-outline-secondary toggle-pass border-secondary-subtle" type="button"><i class="fa-regular fa-eye"></i></button>
+                            </div>
+                            <span asp-validation-for="NewPassword" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="ConfirmPassword" class="form-label text-secondary fw-semibold small">Confirm New Password</label>
+                            <div class="input-group">
+                                <input asp-for="ConfirmPassword" type="password" class="form-control rounded-start-3 border-secondary-subtle" required placeholder="Re-enter new password">
+                                <button class="btn btn-outline-secondary toggle-pass border-secondary-subtle" type="button"><i class="fa-regular fa-eye"></i></button>
+                            </div>
+                            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                        </div>
+
+                        <button type="submit" class="btn btn-outline-primary rounded-3 w-100 py-2.5 fw-bold transition-all hover-scale">
+                            <i class="fa-solid fa-key me-1"></i> Update Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Family & Co-Residents Management -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <div>
+                            <h4 class="fw-bold text-dark mb-1"><i class="fa-solid fa-users text-primary me-2"></i> Family & Co-Residents</h4>
+                            <p class="text-secondary small mb-0">Register flat members to keep emergency contacts updated and authorize visitor actions.</p>
+                        </div>
+                        <button class="btn btn-primary rounded-pill px-3.5 py-2 fw-semibold shadow-sm transition-all hover-scale" id="btnAddFamilyMember">
+                            <i class="fa-solid fa-plus me-1"></i> Add Member
+                        </button>
+                    </div>
+
+                    <!-- Family Member Table -->
+                    <div class="table-responsive flex-grow-1">
+                        <table class="table table-hover align-middle" id="familyTable">
+                            <thead class="table-light border-0">
+                                <tr>
+                                    <th class="border-0 rounded-start-3">Full Name</th>
+                                    <th class="border-0">Relation</th>
+                                    <th class="border-0">Phone Number</th>
+                                    <th class="border-0">Email Address</th>
+                                    <th class="border-0 text-end rounded-end-3" style="width: 110px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.FamilyMembers == null || !Model.FamilyMembers.Any())
+                                {
+                                    <tr id="emptyFamilyRow">
+                                        <td colspan="5" class="text-center py-5 text-secondary">
+                                            <div class="mb-3"><i class="fa-solid fa-people-group fs-2 text-muted"></i></div>
+                                            <p class="mb-0">No family members registered yet.</p>
+                                            <small class="text-muted">Click the "Add Member" button to get started.</small>
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var member in Model.FamilyMembers)
+                                    {
+                                        <tr data-id="@member.FamilyMemberId">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3 shadow-sm" style="width: 36px; height: 36px; font-size: 0.9rem;">
+                                                        @member.FullName.Substring(0, Math.Min(2, member.FullName.Length)).ToUpper()
+                                                    </div>
+                                                    <span class="fw-bold text-dark member-name">@member.FullName</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle px-2.5 py-1.5 member-relation">@member.Relation</span>
+                                            </td>
+                                            <td class="text-secondary member-phone">@(string.IsNullOrEmpty(member.PhoneNumber) ? "—" : member.PhoneNumber)</td>
+                                            <td class="text-secondary member-email">@(string.IsNullOrEmpty(member.Email) ? "—" : member.Email)</td>
+                                            <td class="text-end">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    <button class="btn btn-icon btn-light text-primary rounded-circle hover-scale edit-member-btn" 
+                                                            data-id="@member.FamilyMemberId" 
+                                                            data-name="@member.FullName"
+                                                            data-relation="@member.Relation"
+                                                            data-phone="@member.PhoneNumber"
+                                                            data-email="@member.Email">
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </button>
+                                                    <button class="btn btn-icon btn-light text-danger rounded-circle hover-scale delete-member-btn" 
+                                                            data-id="@member.FamilyMemberId">
+                                                        <i class="fa-solid fa-trash-can"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Family Member Modal -->
+<div class="modal fade" id="familyModal" tabindex="-1" aria-labelledby="familyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark" id="familyModalLabel">Add Family Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <form id="familyForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="FamilyMemberId" name="FamilyMemberId" value="0">
+                    <input type="hidden" id="UserId" name="UserId" value="@Model.UserInfo.UserId">
+
+                    <div class="mb-3">
+                        <label for="FullName" class="form-label text-secondary fw-semibold small">Full Name</label>
+                        <input type="text" class="form-control rounded-3 border-secondary-subtle" id="FullName" name="FullName" required placeholder="Enter full name">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Relation" class="form-label text-secondary fw-semibold small">Relationship</label>
+                        <select class="form-select rounded-3 border-secondary-subtle" id="Relation" name="Relation" required>
+                            <option value="">-- Select relationship --</option>
+                            <option value="Spouse">Spouse</option>
+                            <option value="Child">Child</option>
+                            <option value="Parent">Parent</option>
+                            <option value="Sibling">Sibling</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="PhoneNumber" class="form-label text-secondary fw-semibold small">Phone Number (Optional)</label>
+                        <input type="tel" class="form-control rounded-3 border-secondary-subtle" id="PhoneNumber" name="PhoneNumber" placeholder="Enter phone number">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Email" class="form-label text-secondary fw-semibold small">Email Address (Optional)</label>
+                        <input type="email" class="form-control rounded-3 border-secondary-subtle" id="Email" name="Email" placeholder="Enter email address">
+                    </div>
+
+                    <div class="alert alert-danger d-none border-0 rounded-3 mt-3 py-2 text-xs" id="modalError"></div>
+
+                    <div class="d-flex gap-2 justify-content-end mt-4">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" id="btnSaveMember">
+                            <i class="fa-solid fa-circle-check me-1"></i> Save Member
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function () {
+            // Profile Picture Preview
+            $('#profileImage').change(function (e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        $('#profilePreview').attr('src', event.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Password Toggle Visibility
+            $('.toggle-pass').click(function () {
+                const btn = $(this);
+                const input = btn.siblings('input');
+                const type = input.attr('type') === 'password' ? 'text' : 'password';
+                input.attr('type', type);
+                btn.find('i').toggleClass('fa-eye fa-eye-slash');
+            });
+
+            // Open Modal for Add
+            $('#btnAddFamilyMember').click(function () {
+                $('#familyForm')[0].reset();
+                $('#FamilyMemberId').val('0');
+                $('#familyModalLabel').text('Add Family Member');
+                $('#modalError').addClass('d-none');
+                $('#familyModal').modal('show');
+            });
+
+            // Open Modal for Edit
+            $('#familyTable').on('click', '.edit-member-btn', function () {
+                const btn = $(this);
+                $('#FamilyMemberId').val(btn.data('id'));
+                $('#FullName').val(btn.data('name'));
+                $('#Relation').val(btn.data('relation'));
+                $('#PhoneNumber').val(btn.data('phone'));
+                $('#Email').val(btn.data('email'));
+                
+                $('#familyModalLabel').text('Edit Family Member');
+                $('#modalError').addClass('d-none');
+                $('#familyModal').modal('show');
+            });
+
+            // Submit Family Member Form
+            $('#familyForm').submit(function (e) {
+                e.preventDefault();
+                $('#modalError').addClass('d-none');
+                const form = $(this);
+
+                $.ajax({
+                    url: '/Profile/SaveFamilyMember',
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function (response) {
+                        if (response.success) {
+                            $('#familyModal').modal('hide');
+                            location.reload(); // Refresh to reload the updated list
+                        } else {
+                            $('#modalError').text(response.message).removeClass('d-none');
+                        }
+                    },
+                    error: function () {
+                        $('#modalError').text('An error occurred on the server. Please try again.').removeClass('d-none');
+                    }
+                });
+            });
+
+            // Delete Family Member
+            $('#familyTable').on('click', '.delete-member-btn', function () {
+                if (confirm('Are you sure you want to remove this family member?')) {
+                    const btn = $(this);
+                    const memberId = btn.data('id');
+                    const row = btn.closest('tr');
+                    const token = $('input[name="__RequestVerificationToken"]').val();
+
+                    $.ajax({
+                        url: '/Profile/DeleteFamilyMember',
+                        type: 'POST',
+                        data: {
+                            id: memberId,
+                            __RequestVerificationToken: token
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                row.fadeOut(400, function () {
+                                    $(this).remove();
+                                    if ($('#familyTable tbody tr').length === 0) {
+                                        $('#familyTable tbody').html(`
+                                            <tr id="emptyFamilyRow">
+                                                <td colspan="5" class="text-center py-5 text-secondary">
+                                                    <div class="mb-3"><i class="fa-solid fa-people-group fs-2 text-muted"></i></div>
+                                                    <p class="mb-0">No family members registered yet.</p>
+                                                    <small class="text-muted">Click the "Add Member" button to get started.</small>
+                                                </td>
+                                            </tr>
+                                        `);
+                                    }
+                                });
+                            } else {
+                                alert(response.message);
+                            }
+                        },
+                        error: function () {
+                            alert('An error occurred while deleting the family member.');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+    <style>
+        .transition-all {
+            transition: all 0.25s ease-in-out;
+        }
+        .hover-scale:hover {
+            transform: scale(1.05);
+        }
+        .cursor-pointer {
+            cursor: pointer;
+        }
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .bg-info-subtle {
+            background-color: rgba(6, 182, 212, 0.1) !important;
+        }
+        .bg-primary-subtle {
+            background-color: rgba(37, 99, 235, 0.1) !important;
+        }
+    </style>
+}

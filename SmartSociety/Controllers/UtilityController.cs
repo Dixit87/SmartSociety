@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using SmartSociety.Models;
 using SmartSociety.Repositories;
 using System.Dynamic;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartSociety.Controllers
 {
+    [Authorize(Roles = "Admin,Accountant,Resident")]
     public class UtilityController : Controller
     {
         private readonly IUtilityRepository _utilityRepo;
@@ -16,6 +18,7 @@ namespace SmartSociety.Controllers
             _flatRepo = flatRepo;
         }
 
+        [Authorize(Roles = "Admin,Accountant")]
         public async Task<IActionResult> Index(int? month, int? year)
         {
             ViewBag.CurrentMonth = month ?? DateTime.Now.Month;
@@ -157,6 +160,24 @@ namespace SmartSociety.Controllers
                 return NotFound();
             }
             return View(receiptModel);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> MyUsage()
+        {
+            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdStr, out int userId))
+            {
+                var flat = await _flatRepo.GetFlatByUserIdAsync(userId);
+                if (flat != null)
+                {
+                    var bills = await _utilityRepo.GetUtilityBillsByFlatIdAsync(flat.FlatId);
+                    ViewBag.Flat = flat;
+                    return View(bills);
+                }
+            }
+
+            return View(new List<UtilityBill>());
         }
     }
 }

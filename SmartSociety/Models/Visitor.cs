@@ -40,6 +40,11 @@ namespace SmartSociety.Models
         [StringLength(20)]
         public string Status { get; set; } = "Pending";
 
+        // Pre-approved Invite details
+        [StringLength(20)]
+        public string? InviteCode { get; set; }
+        public DateTime? ExpiryDate { get; set; }
+
         // Navigation / Extended Properties
         public string? FlatNumber { get; set; }
         public string? BlockName { get; set; }

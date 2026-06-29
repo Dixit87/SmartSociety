@@ -8,6 +8,7 @@ namespace SmartSociety.Repositories
         Task UpdateSettingsAsync(MaintenanceSetting setting);
         Task GenerateBulkBillsAsync(int month, int year, decimal extraCharges, string? extraChargeRemarks);
         Task<IEnumerable<MaintenanceBill>> GetBillsAsync(int? month = null, int? year = null);
+        Task<IEnumerable<MaintenanceBill>> GetBillsByFlatIdAsync(int flatId);
         Task RecordPaymentAsync(int billId, decimal paidAmount, string paymentMode, string? transactionId, string? remarks);
         Task<MaintenanceDashboardStats> GetDashboardStatsAsync();
         Task<MaintenanceReceiptViewModel?> GetBillReceiptAsync(int billId);

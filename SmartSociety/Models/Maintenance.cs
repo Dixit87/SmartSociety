@@ -22,6 +22,23 @@ namespace SmartSociety.Models
         [Display(Name = "Days until Due")]
         public int DueDays { get; set; }
 
+        [Display(Name = "GST Enabled")]
+        public bool GstEnabled { get; set; }
+
+        [Display(Name = "GST Rate (%)")]
+        [Range(0, 100)]
+        public decimal GstRate { get; set; } = 18.00m;
+
+        [Display(Name = "GST Threshold Amount (₹)")]
+        public decimal GstThreshold { get; set; } = 7500.00m;
+
+        [Display(Name = "GSTIN Number")]
+        [StringLength(50)]
+        public string? Gstin { get; set; }
+
+        [Display(Name = "Society Annual Turnover (₹)")]
+        public decimal SocietyAnnualTurnover { get; set; } = 1500000.00m;
+
         public DateTime UpdatedAt { get; set; }
     }
 
@@ -54,6 +71,18 @@ namespace SmartSociety.Models
         [Display(Name = "Amount Paid")]
         public decimal AmountPaid { get; set; }
         
+        [Display(Name = "Tax Amount")]
+        public decimal TaxAmount { get; set; }
+
+        [Display(Name = "CGST")]
+        public decimal CGST { get; set; }
+
+        [Display(Name = "SGST")]
+        public decimal SGST { get; set; }
+
+        [Display(Name = "GST Rate")]
+        public decimal GstRate { get; set; }
+
         [Display(Name = "Due Date")]
         public DateTime DueDate { get; set; }
         

@@ -105,4 +105,29 @@ namespace SmartSociety.Models
         
         public DateTime CreatedAt { get; set; }
     }
+
+    public class MaintenanceSchedule
+    {
+        public int ScheduleId { get; set; }
+        public int AssetId { get; set; }
+        public string? AssetName { get; set; } // Joined field
+        
+        [Required]
+        [StringLength(255)]
+        public string TaskName { get; set; } = null!;
+        
+        [Required]
+        public int FrequencyMonths { get; set; }
+        
+        public DateTime? LastServiceDate { get; set; }
+        
+        [Required]
+        public DateTime NextDueDate { get; set; }
+        
+        public string? Notes { get; set; }
+        
+        public bool IsActive { get; set; } = true;
+        
+        public DateTime CreatedAt { get; set; }
+    }
 }

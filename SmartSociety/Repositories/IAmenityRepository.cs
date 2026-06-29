@@ -14,5 +14,7 @@ namespace SmartSociety.Repositories
         Task<IEnumerable<AmenityBooking>> GetAllBookingsAsync(string status = null);
         Task<int> CreateBookingAsync(AmenityBooking booking);
         Task UpdateBookingStatusAsync(int bookingId, string status, string remarks = null);
+        Task<IEnumerable<AmenityBooking>> GetBookingsByFlatIdAsync(int flatId);
+        Task UpdateBookingPaymentStatusAsync(int bookingId, string paymentStatus);
     }
 }

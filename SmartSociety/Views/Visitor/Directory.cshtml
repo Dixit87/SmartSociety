@@ -1,0 +1,155 @@
+@model IEnumerable<SmartSociety.Models.Flat>
+@{
+    ViewData["Title"] = "Resident Directory";
+}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-2">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item text-muted">Gate Security</li>
+    <li class="breadcrumb-item active fw-bold" aria-current="page">Resident Directory</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-address-book text-primary me-2"></i> Resident Directory</h2>
+        <p class="text-muted mb-0">Search flat listings, resident names, phone numbers, and intercom channels.</p>
+    </div>
+    <div>
+        <a href="/" class="btn btn-outline-secondary px-4 py-2 rounded-pill shadow-sm fw-semibold">
+            <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="directoryTable">
+            <thead class="table-light border-0">
+                <tr>
+                    <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Flat Details</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Primary Resident</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Type & Role</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Phone Number</th>
+                    <th class="text-secondary fw-semibold py-3 border-0">Intercom No.</th>
+                    <th class="text-secondary fw-semibold py-3 border-0 text-center rounded-end">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var flat in Model)
+                    {
+                        var residentName = flat.TenantName ?? flat.OwnerName ?? "No Resident Registered";
+                        var residentRole = flat.TenantId.HasValue ? "Tenant" : (flat.OwnerId.HasValue ? "Owner" : "Vacant");
+
+                        <tr data-block="@flat.BlockName" data-flat="@flat.FlatNumber">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-2.5 d-flex align-items-center justify-content-center me-3" style="width: 44px; height: 44px;">
+                                        <i class="fa-solid fa-hotel fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-dark">Block @flat.BlockName</h6>
+                                        <span class="small text-secondary fw-medium">Flat No. @flat.FlatNumber</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">@residentName</div>
+                                @if (flat.TenantId.HasValue || flat.OwnerId.HasValue)
+                                {
+                                    <span class="small text-muted"><i class="fa-regular fa-user"></i> ID: @(flat.TenantId ?? flat.OwnerId)</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill bg-light text-secondary border px-2.5 py-1">@flat.FlatType</span>
+                                <span class="badge rounded-pill @(residentRole == "Tenant" ? "bg-info-subtle text-info border border-info-subtle" : (residentRole == "Owner" ? "bg-primary-subtle text-primary border border-primary-subtle" : "bg-warning-subtle text-warning border border-warning-subtle")) px-2.5 py-1">
+                                    @residentRole
+                                </span>
+                            </td>
+                            <td>
+                                @if (flat.TenantId.HasValue || flat.OwnerId.HasValue)
+                                {
+                                    <span class="fw-semibold text-dark"><i class="fa-solid fa-phone text-muted me-1.5 small"></i> Fetching...</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(flat.IntercomNumber))
+                                {
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border px-3 py-1.5 rounded-pill fw-bold">
+                                        <i class="fa-solid fa-tty me-1"></i> Channel @flat.IntercomNumber
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Not Configured</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (flat.IsActive)
+                                {
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 rounded-pill"><i class="fa-solid fa-circle-check me-1"></i> Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-3 py-1.5 rounded-pill"><i class="fa-solid fa-ban me-1"></i> Inactive</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Setup DataTable
+            var table = $('#directoryTable').DataTable({
+                "pageLength": 15,
+                "ordering": true,
+                "order": [[0, "asc"]],
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": "Search residents, flats, blocks..."
+                }
+            });
+
+            // AJAX call to load phone numbers dynamically to prevent full list rendering overhead
+            fetchFlatPhoneNumbers();
+        });
+
+        function fetchFlatPhoneNumbers() {
+            $.getJSON('/Visitor/GetResidentContacts', function (data) {
+                if (data.success) {
+                    $('#directoryTable tbody tr').each(function () {
+                        var row = $(this);
+                        var blockText = row.data('block');
+                        var flatText = row.data('flat');
+                        
+                        var key = blockText + "-" + flatText;
+                        var phoneCell = row.find('td:nth-child(4)');
+
+                        if (data.contacts[key]) {
+                            phoneCell.html(`<a href="tel:${data.contacts[key]}" class="text-decoration-none fw-bold text-dark"><i class="fa-solid fa-phone text-primary me-1.5 small"></i> ${data.contacts[key]}</a>`);
+                        } else {
+                            phoneCell.html('<span class="text-muted">—</span>');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}

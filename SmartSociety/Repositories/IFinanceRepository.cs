@@ -20,5 +20,15 @@ namespace SmartSociety.Repositories
         
         Task<FinanceDashboardStats> GetDashboardStatsAsync(int? month = null, int? year = null);
         Task<IEnumerable<ChartDataPoint>> GetExpenseChartDataAsync(int? month = null, int? year = null);
+
+        // Fixed Deposits
+        Task<IEnumerable<FixedDeposit>> GetFixedDepositsAsync();
+        Task<int> CreateFixedDepositAsync(FixedDeposit fd);
+        Task UpdateFixedDepositStatusAsync(int fdId, string status);
+
+        // Sinking Fund
+        Task<IEnumerable<SinkingFundTransaction>> GetSinkingFundTransactionsAsync();
+        Task<int> CreateSinkingFundTransactionAsync(SinkingFundTransaction txn);
+        Task<decimal> GetSinkingFundBalanceAsync();
     }
 }

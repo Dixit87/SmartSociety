@@ -1,0 +1,370 @@
+@model IEnumerable<SmartSociety.Models.SmartMeter>
+@{
+    ViewData["Title"] = "Prepaid Smart Meters";
+    var flat = ViewBag.Flat as SmartSociety.Models.Flat;
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-dark fw-bold"><i class="fa-solid fa-bolt-lightning text-warning me-2"></i> Prepaid Smart Meters</h1>
+            <p class="text-muted small mb-0">Flat: <span class="fw-bold text-dark">@flat?.BlockName - @flat?.FlatNumber</span> | Live utilities balance and consumption monitoring.</p>
+        </div>
+    </div>
+
+    <!-- Alert for low balance/suspension -->
+    @if (Model.Any(m => m.Balance < 150 || m.Status == "Suspended"))
+    {
+        <div class="alert alert-warning border border-warning-subtle rounded-4 p-3 shadow-sm d-flex align-items-center mb-4 small" role="alert">
+            <i class="fa-solid fa-circle-exclamation fs-4 me-3 text-warning"></i>
+            <div>
+                <strong class="text-dark">Low Balance / Suspension Warning!</strong>
+                <p class="mb-0 text-muted">One or more smart meters require a recharge. If the balance falls to 0 or below, services will be suspended automatically. Please recharge now.</p>
+            </div>
+        </div>
+    }
+
+    <!-- Meters Grid -->
+    <div class="row g-4 mb-4">
+        @if (!Model.Any())
+        {
+            <div class="col-12 text-center py-5 bg-white rounded-4 shadow-sm">
+                <i class="fa-solid fa-gauge-simple fa-4x text-muted opacity-50 mb-3"></i>
+                <h5 class="fw-bold text-secondary">No Smart Meters Provisioned</h5>
+                <p class="text-muted small mb-0">Please contact the society administrator to set up prepaid water or electricity meters for your flat.</p>
+            </div>
+        }
+        else
+        {
+            foreach (var m in Model)
+            {
+                var isElec = string.Equals(m.MeterType, "Electricity", StringComparison.OrdinalIgnoreCase);
+                var themeColor = isElec ? "warning" : "info";
+                var icon = isElec ? "fa-bolt" : "fa-droplet";
+                
+                var balanceColor = "text-success";
+                if (m.Balance <= 0)
+                {
+                    balanceColor = "text-danger fw-bold";
+                }
+                else if (m.Balance < 150)
+                {
+                    balanceColor = "text-warning fw-bold";
+                }
+
+                <div class="col-md-6">
+                    <div class="card border-0 rounded-4 shadow-sm p-4 bg-white h-100 border-card">
+                        <!-- Top Details -->
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-@themeColor bg-opacity-10 text-@themeColor rounded-circle p-3 me-3">
+                                    <i class="fa-solid @icon fa-xl"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-0 text-capitalize">@m.MeterType Meter</h5>
+                                    <span class="text-muted small">No: @m.MeterNumber</span>
+                                </div>
+                            </div>
+                            <div>
+                                @if (m.Status == "Active")
+                                {
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-3 py-1 text-xs">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Active
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle rounded-pill px-3 py-1 text-xs">
+                                        <i class="fa-solid fa-ban me-1"></i> Suspended
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Balance display -->
+                        <div class="row g-3 align-items-center mb-4 border-bottom pb-4">
+                            <div class="col-6 border-end text-center">
+                                <span class="text-muted small fw-semibold">Prepaid Balance</span>
+                                <h2 class="fw-black mt-2 mb-0 @balanceColor">₹@m.Balance.ToString("0.00")</h2>
+                            </div>
+                            <div class="col-6 text-center">
+                                <span class="text-muted small fw-semibold">Total Consumed</span>
+                                <h3 class="fw-bold text-dark mt-2 mb-0">@m.CurrentReading.ToString("0.00") <span class="small fw-normal text-muted">@m.MeasurementUnit</span></h3>
+                            </div>
+                        </div>
+
+                        <!-- Technical information -->
+                        <div class="small text-muted mb-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Unit Rate:</span>
+                                <span class="text-dark fw-medium">₹@m.RatePerUnit.ToString("0.00") per @m.MeasurementUnit</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Last Reading Sync:</span>
+                                <span class="text-dark fw-medium">@m.LastSyncTime.ToString("dd MMM yyyy, hh:mm tt")</span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill w-50 py-2 fw-semibold" onclick="viewMeterLogs(@m.MeterId, '@m.MeterType', '@m.MeterNumber')">
+                                <i class="fa-solid fa-clock-rotate-left me-1"></i> History Logs
+                            </button>
+                            <button class="btn btn-sm btn-primary rounded-pill w-50 py-2 fw-bold" onclick="openRechargeModal(@m.MeterId, '@m.MeterType', '@m.MeterNumber')">
+                                <i class="fa-solid fa-wallet me-1"></i> Quick Recharge
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- History Logs Section (Initially Hidden until clicked) -->
+    <div class="card border-0 rounded-4 shadow-sm p-4 bg-white d-none mb-4" id="logsCard">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+            <h5 class="fw-bold text-dark mb-0" id="logsCardTitle">Meter Logs</h5>
+            <button type="button" class="btn-close" onclick="closeLogsCard()"></button>
+        </div>
+
+        <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active small py-2 rounded-pill" id="pills-consumption-tab" data-bs-toggle="pill" data-bs-target="#pills-consumption" type="button" role="tab"><i class="fa-solid fa-chart-line me-1"></i> Consumption History</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link small py-2 rounded-pill" id="pills-recharges-tab" data-bs-toggle="pill" data-bs-target="#pills-recharges" type="button" role="tab"><i class="fa-solid fa-receipt me-1"></i> Recharge History</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="pills-tabContent">
+            <!-- Consumption Logs -->
+            <div class="tab-pane fade show active" id="pills-consumption" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border-0">
+                        <thead class="bg-light text-muted small">
+                            <tr>
+                                <th class="border-0">Time</th>
+                                <th class="border-0 text-end">Units Consumed</th>
+                                <th class="border-0 text-end">Cost</th>
+                                <th class="border-0 text-end">Balance Remaining</th>
+                            </tr>
+                        </thead>
+                        <tbody id="consumptionBody" class="small text-secondary">
+                            <!-- Populated via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recharge Logs -->
+            <div class="tab-pane fade" id="pills-recharges" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border-0">
+                        <thead class="bg-light text-muted small">
+                            <tr>
+                                <th class="border-0">Time</th>
+                                <th class="border-0 text-end">Amount</th>
+                                <th class="border-0">Payment Method</th>
+                                <th class="border-0">Transaction ID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rechargesBody" class="small text-secondary">
+                            <!-- Populated via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recharge Modal -->
+<div class="modal fade" id="rechargeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-credit-card me-1.5 text-muted"></i> Smart Meter Recharge</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="rechargeForm" onsubmit="event.preventDefault(); submitRecharge();">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="RechargeMeterId" name="meterId" value="0" />
+                
+                <div class="modal-body p-4 bg-white">
+                    <div class="mb-3 text-center bg-light rounded-3 p-3">
+                        <span class="text-muted small d-block mb-1">Recharging Account</span>
+                        <h6 class="fw-bold text-dark mb-0" id="rechargeMeterLabel">Electricity Meter (No: 1234)</h6>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="rechargeAmount" class="form-label small fw-semibold text-muted mb-1">Enter Amount (₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0">₹</span>
+                            <input type="number" step="1" min="10" max="10000" class="form-control bg-light border-0 py-2.5 fs-5 fw-bold" id="rechargeAmount" name="amount" value="500" required />
+                        </div>
+                        <div class="text-xs text-muted mt-1.5">Minimum recharge: ₹10. Maximum recharge: ₹10,000.</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-muted mb-1">Payment Method</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="payUPI" value="UPI" checked />
+                                <label class="form-check-label small" for="payUPI">
+                                    <i class="fa-solid fa-qrcode text-primary me-1"></i> UPI (GPay/PhonePe)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="payCard" value="Credit/Debit Card" />
+                                <label class="form-check-label small" for="payCard">
+                                    <i class="fa-regular fa-credit-card text-success me-1"></i> Debit / Credit Card
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold" id="btnRecharge">Proceed to Pay</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        var rechargeModal;
+        var activeMeterId = 0;
+
+        $(document).ready(function() {
+            rechargeModal = new bootstrap.Modal(document.getElementById('rechargeModal'));
+        });
+
+        function openRechargeModal(meterId, type, number) {
+            document.getElementById("RechargeMeterId").value = meterId;
+            document.getElementById("rechargeMeterLabel").innerText = type.toUpperCase() + " Meter (No: " + number + ")";
+            document.getElementById("rechargeAmount").value = 500;
+            rechargeModal.show();
+        }
+
+        function submitRecharge() {
+            var meterId = document.getElementById("RechargeMeterId").value;
+            var amount = document.getElementById("rechargeAmount").value;
+            var method = $('input[name="paymentMethod"]:checked').val();
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            $("#btnRecharge").prop("disabled", true).text("Processing mock payment...");
+
+            $.ajax({
+                url: '/IoT/RechargeMeter',
+                type: 'POST',
+                data: {
+                    meterId: meterId,
+                    amount: amount,
+                    paymentMethod: method,
+                    __RequestVerificationToken: token
+                },
+                success: function(res) {
+                    $("#btnRecharge").prop("disabled", false).text("Proceed to Pay");
+                    rechargeModal.hide();
+                    
+                    if (res.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Recharge Success',
+                            text: res.message
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Failed',
+                            text: res.message
+                        });
+                    }
+                },
+                error: function() {
+                    $("#btnRecharge").prop("disabled", false).text("Proceed to Pay");
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Payment Error',
+                        text: 'Unable to process payment gateway transaction.'
+                    });
+                }
+            });
+        }
+
+        function viewMeterLogs(meterId, type, number) {
+            activeMeterId = meterId;
+            document.getElementById("logsCardTitle").innerText = type.toUpperCase() + " Meter (" + number + ") History Logs";
+            $("#logsCard").removeClass("d-none");
+            
+            // Scroll to logs card
+            $('html, body').animate({
+                scrollTop: $("#logsCard").offset().top - 20
+            }, 500);
+
+            loadLogs();
+        }
+
+        function loadLogs() {
+            if (activeMeterId <= 0) return;
+
+            // Load consumption
+            $.getJSON('/IoT/GetMeterLogs', { meterId: activeMeterId }, function(res) {
+                $("#consumptionBody").empty();
+                if (res.success) {
+                    if (res.logs.length === 0) {
+                        $("#consumptionBody").append('<tr><td colspan="4" class="text-center py-4 text-muted">No usage recorded.</td></tr>');
+                    } else {
+                        $.each(res.logs, function(i, log) {
+                            var date = new Date(log.timestamp).toLocaleString();
+                            var row = '<tr>' +
+                                '<td>' + date + '</td>' +
+                                '<td class="text-end fw-semibold">' + log.unitsConsumed.toFixed(2) + '</td>' +
+                                '<td class="text-end text-dark fw-bold">₹' + log.cost.toFixed(2) + '</td>' +
+                                '<td class="text-end">₹' + log.balanceAfter.toFixed(2) + '</td>' +
+                                '</tr>';
+                            $("#consumptionBody").append(row);
+                        });
+                    }
+                }
+            });
+
+            // Load recharges
+            $.getJSON('/IoT/GetMeterRecharges', { meterId: activeMeterId }, function(res) {
+                $("#rechargesBody").empty();
+                if (res.success) {
+                    if (res.recharges.length === 0) {
+                        $("#rechargesBody").append('<tr><td colspan="4" class="text-center py-4 text-muted">No recharges recorded.</td></tr>');
+                    } else {
+                        $.each(res.recharges, function(i, reg) {
+                            var date = new Date(reg.rechargeTime).toLocaleString();
+                            var row = '<tr>' +
+                                '<td>' + date + '</td>' +
+                                '<td class="text-end text-success fw-bold">₹' + reg.amount.toFixed(2) + '</td>' +
+                                '<td>' + reg.paymentMethod + '</td>' +
+                                '<td><code class="text-dark">' + reg.transactionId + '</code></td>' +
+                                '</tr>';
+                            $("#rechargesBody").append(row);
+                        });
+                    }
+                }
+            });
+        }
+
+        function closeLogsCard() {
+            $("#logsCard").addClass("d-none");
+            activeMeterId = 0;
+        }
+    </script>
+    <style>
+        .text-xs {
+            font-size: 0.75rem;
+        }
+    </style>
+}

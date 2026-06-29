@@ -1,0 +1,237 @@
+@using System.Dynamic
+@model dynamic
+
+@{
+    ViewData["Title"] = "Notice Board & Polls";
+    var notices = Model.Notices as IEnumerable<SmartSociety.Models.Notice>;
+    var polls = Model.Polls as IEnumerable<SmartSociety.Models.Poll>;
+    var userVotes = Model.UserVotes as Dictionary<int, int> ?? new Dictionary<int, int>();
+}
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-2">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item text-muted">Community</li>
+    <li class="breadcrumb-item active fw-bold text-primary" aria-current="page">Notice Board & Polls</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Notice Board & Voting</h2>
+        <p class="text-muted mb-0">Stay updated with society circulars and express your opinions in voting polls.</p>
+    </div>
+</div>
+
+<ul class="nav nav-pills mb-4" id="boardTab" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active px-4 py-2.5 fw-semibold" id="notices-tab" data-bs-toggle="tab" data-bs-target="#notices" type="button" role="tab"><i class="fa-solid fa-bullhorn me-1.5"></i> Active Notices</button>
+    </li>
+    <li class="nav-item ms-2">
+        <button class="nav-link px-4 py-2.5 fw-semibold" id="polls-tab" data-bs-toggle="tab" data-bs-target="#polls" type="button" role="tab"><i class="fa-solid fa-check-to-slot me-1.5"></i> Voting Polls</button>
+    </li>
+</ul>
+
+<div class="tab-content bg-transparent border-0 p-0" id="boardTabContent">
+    
+    <!-- Tab 1: Notices -->
+    <div class="tab-pane fade show active" id="notices" role="tabpanel">
+        <div class="row g-3">
+            @if (notices != null && notices.Any())
+            {
+                foreach (var notice in notices)
+                {
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 position-relative hover-card @(notice.IsPinned ? "border-start border-primary border-4" : "")">
+                            @if (notice.IsPinned)
+                            {
+                                <span class="position-absolute top-0 end-0 bg-primary text-white text-xs px-3 py-1 rounded-bl-4 fw-bold shadow-sm">
+                                    <i class="fa-solid fa-thumbtack me-1"></i> PINNED
+                                </span>
+                            }
+                            
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="badge bg-primary bg-opacity-10 text-primary px-2.5 py-1">@notice.Category</span>
+                                <span class="text-muted small"><i class="fa-regular fa-clock me-1"></i> @notice.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")</span>
+                            </div>
+                            
+                            <h5 class="fw-bold text-dark mb-2">@notice.Title</h5>
+                            <p class="text-secondary mb-3">@notice.Description</p>
+                            
+                            @if (!string.IsNullOrEmpty(notice.AttachmentPath))
+                            {
+                                <div class="d-flex">
+                                    <a href="@notice.AttachmentPath" target="_blank" download class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-medium">
+                                        <i class="fa-solid fa-paperclip me-1"></i> Download Attachment
+                                    </a>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12 text-center py-5 bg-white rounded-4 border">
+                    <i class="fa-solid fa-bullhorn fa-3x text-muted opacity-50 mb-3"></i>
+                    <h5 class="fw-bold text-secondary">No Active Notices</h5>
+                    <p class="text-muted mb-0">Check back later for any updates from the administration.</p>
+                </div>
+            }
+        </div>
+    </div>
+    
+    <!-- Tab 2: Polls -->
+    <div class="tab-pane fade" id="polls" role="tabpanel">
+        <div class="row g-3">
+            @if (polls != null && polls.Any())
+            {
+                foreach (var poll in polls)
+                {
+                    <div class="col-md-6" id="poll-card-@poll.PollId">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1">@poll.Status</span>
+                                    <span class="text-muted small ms-2">Ends: @poll.EndDate.ToString("dd MMM yyyy")</span>
+                                </div>
+                                <span class="text-muted small fw-bold" id="poll-votes-count-@poll.PollId"><i class="fa-solid fa-users me-1"></i> @poll.TotalVotes votes</span>
+                            </div>
+                            
+                            <h5 class="fw-bold text-dark mb-1">@poll.Question</h5>
+                            @if(!string.IsNullOrEmpty(poll.Description)) {
+                                <p class="text-muted small mb-3">@poll.Description</p>
+                            } else {
+                                <div class="mb-3"></div>
+                            }
+                            
+                            @{
+                                bool hasVoted = userVotes.ContainsKey(poll.PollId);
+                                int votedOptionId = hasVoted ? userVotes[poll.PollId] : 0;
+                            }
+                            
+                            <!-- Vote Form Options -->
+                            <div id="poll-options-container-@poll.PollId" class="d-flex flex-column gap-2 mb-3" style="@(hasVoted ? "display: none !important;" : "")">
+                                @if (poll.Options != null)
+                                {
+                                    foreach (var opt in poll.Options)
+                                    {
+                                        <button type="button" class="btn btn-outline-light text-start text-dark border p-3 rounded-3 d-flex justify-content-between align-items-center hover-poll-option" onclick="castVote(@poll.PollId, @opt.OptionId)">
+                                            <span class="fw-medium">@opt.OptionText</span>
+                                            <i class="fa-regular fa-circle text-muted"></i>
+                                        </button>
+                                    }
+                                }
+                            </div>
+                            
+                            <!-- Results -->
+                            <div id="poll-results-container-@poll.PollId" class="d-flex flex-column gap-2 mb-3" style="@(hasVoted ? "" : "display: none !important;")">
+                                @if (poll.Options != null)
+                                {
+                                    foreach (var opt in poll.Options)
+                                    {
+                                        bool isUserChoice = (opt.OptionId == votedOptionId);
+                                        <div>
+                                            <div class="d-flex justify-content-between text-xs fw-bold text-dark mb-1">
+                                                <span>
+                                                    @opt.OptionText 
+                                                    @if (isUserChoice)
+                                                    {
+                                                        <span class="badge bg-primary ms-1"><i class="fa-solid fa-check me-1"></i> Your Vote</span>
+                                                    }
+                                                </span>
+                                                <span id="opt-pct-lbl-@opt.OptionId">@opt.VotePercentage.ToString("0")%</span>
+                                            </div>
+                                            <div class="progress rounded-pill" style="height: 10px;">
+                                                <div class="progress-bar @(isUserChoice ? "bg-primary" : "bg-success") progress-bar-striped progress-bar-animated rounded-pill" id="opt-bar-@opt.OptionId" role="progressbar" style="width: @opt.VotePercentage.ToString("0")%;"></div>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                            
+                            <div class="text-end">
+                                <button type="button" class="btn btn-sm btn-link text-decoration-none text-muted" id="btn-show-results-@poll.PollId" style="@(hasVoted ? "display: none !important;" : "")" onclick="loadPollResults(@poll.PollId)"><i class="fa-solid fa-chart-bar me-1"></i> View Live Results</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12 text-center py-5 bg-white rounded-4 border">
+                    <i class="fa-solid fa-check-to-slot fa-3x text-muted opacity-50 mb-3"></i>
+                    <h5 class="fw-bold text-secondary">No Active Polls</h5>
+                    <p class="text-muted mb-0">No active voting campaigns are running at this time.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function castVote(pollId, optionId) {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            
+            $.ajax({
+                url: '/Poll/CastVote',
+                type: 'POST',
+                data: {
+                    pollId: pollId,
+                    optionId: optionId,
+                    __RequestVerificationToken: token
+                },
+                success: function(res) {
+                    if (res.success) {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: 'Vote registered!',
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                        loadPollResults(pollId);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'Could not cast vote.', 'error');
+                }
+            });
+        }
+
+        function loadPollResults(pollId) {
+            $.ajax({
+                url: `/Poll/GetPollResults?pollId=${pollId}`,
+                type: 'GET',
+                success: function(res) {
+                    if (res.success) {
+                        var poll = res.data;
+                        
+                        // Update total count
+                        $(`#poll-votes-count-${pollId}`).html(`<i class="fa-solid fa-users me-1"></i> ${poll.totalVotes} votes`);
+                        
+                        // Hide options, show bars
+                        $(`#poll-options-container-${pollId}`).attr('style', 'display: none !important;');
+                        $(`#poll-results-container-${pollId}`).show();
+                        $(`#btn-show-results-${pollId}`).hide();
+
+                        // Calculate percentages
+                        poll.options.forEach(function(opt) {
+                            var pct = poll.totalVotes > 0 ? (opt.voteCount / poll.totalVotes * 100) : 0;
+                            
+                            $(`#opt-pct-lbl-${opt.optionId}`).text(pct.toFixed(0) + '%');
+                            $(`#opt-bar-${opt.optionId}`).css('width', pct.toFixed(0) + '%');
+                        });
+                    }
+                }
+            });
+        }
+    </script>
+}

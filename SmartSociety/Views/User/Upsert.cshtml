@@ -18,7 +18,7 @@
 <div class="row mb-5">
     <div class="col-12">
         <div class="bg-white rounded-4 shadow-sm p-4 p-md-5">
-            <form method="post" asp-action="Upsert" enctype="multipart/form-data">
+            <form method="post" asp-action="Upsert" enctype ="multipart/form-data">
                 <input type="hidden" asp-for="UserId" />
                 <input type="hidden" asp-for="CreatedAt" />
                 <!-- Keep the hash in case it's an update and no new password is provided -->
@@ -44,6 +44,7 @@
                             <option value="Guard">Security Guard</option>
                             <option value="Accountant">Accountant</option>
                             <option value="Technician">Technician</option>
+                            
                         </select>
                         <span asp-validation-for="Role" class="text-danger small"></span>
                     </div>
@@ -129,4 +130,100 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $(document).ready(function() {
+            var $flatInput = $('#FlatNumber');
+            var currentUserId = parseInt($('#UserId').val()) || 0;
+            var isChecking = false;
+
+            function checkAssignment(callback) {
+                var flatNo = $flatInput.val().trim();
+                if (flatNo === '') {
+                    if (callback) callback(true);
+                    return;
+                }
+
+                isChecking = true;
+                $.ajax({
+                    url: '/User/CheckFlatAssignment',
+                    type: 'GET',
+                    data: { flatNumber: flatNo, excludeUserId: currentUserId },
+                    success: function(res) {
+                        isChecking = false;
+                        if (res.isAssigned) {
+                            var profileHtml = '';
+                            if (res.profilePicture && res.profilePicture !== '') {
+                                profileHtml = `<img src="${res.profilePicture}" class="rounded-circle shadow-sm mb-3" style="width: 80px; height: 80px; object-fit: cover;" />`;
+                            } else {
+                                var initial = res.fullName.charAt(0).toUpperCase();
+                                profileHtml = `<div class="bg-primary text-white rounded-circle d-inline-flex justify-content-center align-items-center fw-bold shadow-sm mb-3" style="width: 80px; height: 80px; font-size: 2.2rem;">${initial}</div>`;
+                            }
+
+                            Swal.fire({
+                                title: '<span class="text-danger fw-bold fs-4">Flat Already Assigned!</span>',
+                                html: `
+                                    <div class="text-center p-2">
+                                        ${profileHtml}
+                                        <h5 class="fw-bold text-dark mb-3">${res.fullName}</h5>
+                                        <div class="bg-light rounded-3 p-3 text-start border shadow-sm">
+                                            <div class="row mb-2">
+                                                <div class="col-4 text-muted small fw-semibold">Role:</div>
+                                                <div class="col-8 fw-semibold text-primary">${res.role}</div>
+                                            </div>
+                                            <div class="row mb-2">
+                                                <div class="col-4 text-muted small fw-semibold">Phone:</div>
+                                                <div class="col-8 fw-medium">${res.phoneNumber}</div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-4 text-muted small fw-semibold">Email:</div>
+                                                <div class="col-8 fw-medium text-truncate" title="${res.email}">${res.email}</div>
+                                            </div>
+                                        </div>
+                                        <p class="text-muted small mt-3 mb-0">This flat is already assigned to the user above. Please choose a different flat.</p>
+                                    </div>
+                                `,
+                                background: '#ffffff',
+                                confirmButtonText: 'OK',
+                                confirmButtonColor: '#3085d6',
+                                customClass: {
+                                    popup: 'rounded-4 border-0 shadow-lg',
+                                    confirmButton: 'rounded-pill px-4'
+                                }
+                            }).then(() => {
+                                $flatInput.val('');
+                                $flatInput.focus();
+                                if (callback) callback(false);
+                            });
+                        } else {
+                            if (callback) callback(true);
+                        }
+                    },
+                    error: function() {
+                        isChecking = false;
+                        if (callback) callback(true);
+                    }
+                });
+            }
+
+            $flatInput.on('change', function() {
+                checkAssignment();
+            });
+
+            $('form').on('submit', function(e) {
+                var form = this;
+                if (isChecking) {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                e.preventDefault();
+                checkAssignment(function(isValid) {
+                    if (isValid) {
+                        form.submit();
+                    }
+                });
+            });
+        });
+    </script>
 }

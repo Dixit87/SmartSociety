@@ -14,7 +14,7 @@ namespace SmartSociety.Repositories
 
         public FinanceRepository(IConfiguration configuration)
         {
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _connectionString = configuration.GetConnectionString("DefaultConnection") ?? "";
         }
 
         public async Task<IEnumerable<ExpenseCategory>> GetExpenseCategoriesAsync()
@@ -148,6 +148,82 @@ namespace SmartSociety.Repositories
             return await connection.QueryAsync<ChartDataPoint>(
                 "sp_Expense_GetChartData",
                 new { Month = month, Year = year },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        // Fixed Deposits
+        public async Task<IEnumerable<FixedDeposit>> GetFixedDepositsAsync()
+        {
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QueryAsync<FixedDeposit>(
+                "sp_FixedDeposits_GetAll",
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<int> CreateFixedDepositAsync(FixedDeposit fd)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var parameters = new DynamicParameters();
+            parameters.Add("@FdNumber", fd.FdNumber);
+            parameters.Add("@BankName", fd.BankName);
+            parameters.Add("@PrincipalAmount", fd.PrincipalAmount);
+            parameters.Add("@InterestRate", fd.InterestRate);
+            parameters.Add("@MaturityDate", fd.MaturityDate);
+            parameters.Add("@MaturityAmount", fd.MaturityAmount);
+            parameters.Add("@Status", fd.Status);
+            parameters.Add("@DateInvested", fd.DateInvested);
+            parameters.Add("@Notes", fd.Notes);
+            parameters.Add("@NewFdId", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
+                "sp_FixedDeposits_Create",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+
+            return parameters.Get<int>("@NewFdId");
+        }
+
+        public async Task UpdateFixedDepositStatusAsync(int fdId, string status)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.ExecuteAsync(
+                "sp_FixedDeposits_UpdateStatus",
+                new { FdId = fdId, Status = status },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        // Sinking Fund
+        public async Task<IEnumerable<SinkingFundTransaction>> GetSinkingFundTransactionsAsync()
+        {
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QueryAsync<SinkingFundTransaction>(
+                "sp_SinkingFund_GetAll",
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<int> CreateSinkingFundTransactionAsync(SinkingFundTransaction txn)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var parameters = new DynamicParameters();
+            parameters.Add("@Type", txn.Type);
+            parameters.Add("@Amount", txn.Amount);
+            parameters.Add("@Purpose", txn.Purpose);
+            parameters.Add("@ReferenceId", txn.ReferenceId);
+            parameters.Add("@NewTransactionId", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
+                "sp_SinkingFund_Create",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+
+            return parameters.Get<int>("@NewTransactionId");
+        }
+
+        public async Task<decimal> GetSinkingFundBalanceAsync()
+        {
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QuerySingleOrDefaultAsync<decimal>(
+                "sp_SinkingFund_GetBalance",
                 commandType: CommandType.StoredProcedure);
         }
     }

@@ -54,6 +54,11 @@ namespace SmartSociety
             builder.Services.AddScoped<ISettingRepository, SettingRepository>();
             builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
             builder.Services.AddScoped<IAuthRepository, AuthRepository>(); // Auth repo
+            builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+            builder.Services.AddScoped<IFamilyRepository, FamilyRepository>();
+            builder.Services.AddScoped<IClassifiedsRepository, ClassifiedsRepository>();
+            builder.Services.AddScoped<IForumRepository, ForumRepository>();
+            builder.Services.AddScoped<IIoTRepository, IoTRepository>();
 
             var app = builder.Build();
 

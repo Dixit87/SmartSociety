@@ -1,18 +1,522 @@
+@model SmartSociety.Models.ResidentDashboardViewModel
 @{
     ViewData["Title"] = "Resident Dashboard";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="h3 mb-0 text-gray-800 fw-bold">Welcome Home, Resident! 👋</h2>
-        <p class="text-muted">Here's what's happening in your society today.</p>
+<div class="container-fluid py-4">
+    <!-- Welcome Header Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 rounded-4 shadow-sm bg-white overflow-hidden dashboard-block">
+                <div class="card-body p-4 p-md-5">
+                    <div class="row align-items-center">
+                        <div class="col-lg-8">
+                            <div class="d-flex align-items-center mb-4 flex-wrap gap-3">
+                                <div class="position-relative">
+                                    <img src="https://ui-avatars.com/api/?name=@(Uri.EscapeDataString(User.Identity?.Name ?? "Resident"))&size=72&background=e0e7ff&color=4f46e5&bold=true" 
+                                         alt="Avatar" class="rounded-circle shadow-sm" style="width: 72px; height: 72px; border: 3px solid #fff;">
+                                    <span class="position-absolute bottom-0 end-0 p-2 bg-success border border-white border-2 rounded-circle"></span>
+                                </div>
+                                <div>
+                                    <p class="text-primary fw-bold small mb-0 text-uppercase tracking-wide" style="letter-spacing: 1px;">Resident Portal</p>
+                                    <h1 class="h2 fw-bold text-dark mb-1">Welcome back, @User.Identity?.Name! 👋</h1>
+                                    <p class="mb-0 text-muted fs-6">Here's what's happening in your society today.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                            <div class="d-inline-flex flex-column align-items-lg-end bg-light px-4 py-3 rounded-4 border border-secondary-subtle">
+                                <span class="text-muted small fw-semibold mb-1">Your Registered Property</span>
+                                <span class="fs-5 fw-bold text-dark"><i class="fa-solid fa-house-chimney text-primary me-2"></i> Block @Model.ResidentFlat.BlockName - @Model.ResidentFlat.FlatNumber</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions Row -->
+                    <div class="row g-3 mt-2 border-top pt-4">
+                        <div class="col-6 col-md-3">
+                            <a asp-controller="Visitor" asp-action="MyVisitors" class="btn btn-light border w-100 py-3 rounded-4 d-flex flex-column align-items-center justify-content-center transition-all hover-lift text-decoration-none">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 mb-2">
+                                    <i class="fa-solid fa-user-plus fs-4"></i>
+                                </div>
+                                <span class="fw-bold text-dark small">Register Guest</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <a asp-controller="Complaint" asp-action="MyComplaints" class="btn btn-light border w-100 py-3 rounded-4 d-flex flex-column align-items-center justify-content-center transition-all hover-lift text-decoration-none">
+                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3 mb-2">
+                                    <i class="fa-solid fa-circle-exclamation fs-4"></i>
+                                </div>
+                                <span class="fw-bold text-dark small">File Complaint</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <a asp-controller="Amenity" asp-action="MyBookings" class="btn btn-light border w-100 py-3 rounded-4 d-flex flex-column align-items-center justify-content-center transition-all hover-lift text-decoration-none">
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle p-3 mb-2">
+                                    <i class="fa-solid fa-calendar-check fs-4"></i>
+                                </div>
+                                <span class="fw-bold text-dark small">Book Amenity</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <a asp-controller="Profile" asp-action="Index" class="btn btn-light border w-100 py-3 rounded-4 d-flex flex-column align-items-center justify-content-center transition-all hover-lift text-decoration-none">
+                                <div class="bg-warning bg-opacity-10 text-warning-emphasis rounded-circle p-3 mb-2">
+                                    <i class="fa-solid fa-user-gear fs-4"></i>
+                                </div>
+                                <span class="fw-bold text-dark small">Profile & Family</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Summary Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Maintenance Dues -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 kpi-card hover-lift border-start border-primary border-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-semibold text-muted mb-0">Maintenance Dues</h6>
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-flex align-items-center justify-content-center stats-icon">
+                            <i class="fa-solid fa-credit-card fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-2 text-dark">₹@Model.OutstandingMaintenanceDues.ToString("N0")</h3>
+                    @if (Model.OutstandingMaintenanceDues > 0)
+                    {
+                        <a asp-controller="Maintenance" asp-action="MyBills" class="small text-danger fw-semibold text-decoration-none d-flex align-items-center arrow-link">
+                            Pay Outstanding <i class="fa-solid fa-arrow-right ms-1"></i>
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="small text-success fw-semibold"><i class="fa-solid fa-circle-check me-1"></i> All Settled</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Utility Dues -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 kpi-card hover-lift border-start border-success border-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-semibold text-muted mb-0">Utility Dues</h6>
+                        <div class="bg-success bg-opacity-10 text-success rounded-circle p-2 d-flex align-items-center justify-content-center stats-icon">
+                            <i class="fa-solid fa-faucet-drip fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-2 text-dark">₹@Model.OutstandingUtilityDues.ToString("N0")</h3>
+                    @if (Model.OutstandingUtilityDues > 0)
+                    {
+                        <a asp-controller="Utility" asp-action="MyUsage" class="small text-warning-emphasis fw-semibold text-decoration-none d-flex align-items-center arrow-link">
+                            Pay Utility Bills <i class="fa-solid fa-arrow-right ms-1"></i>
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="small text-success fw-semibold"><i class="fa-solid fa-circle-check me-1"></i> No Pending Bills</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Complaints -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 kpi-card hover-lift border-start border-danger border-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-semibold text-muted mb-0">Active Complaints</h6>
+                        <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-2 d-flex align-items-center justify-content-center stats-icon">
+                            <i class="fa-solid fa-triangle-exclamation fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-2 text-dark">@Model.ActiveComplaintsCount</h3>
+                    <a asp-controller="Complaint" asp-action="MyComplaints" class="small text-primary fw-semibold text-decoration-none d-flex align-items-center arrow-link">
+                        File / View Tickets <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Notices -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 kpi-card hover-lift border-start border-warning border-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-semibold text-muted mb-0">Society Announcements</h6>
+                        <div class="bg-warning bg-opacity-10 text-warning-emphasis rounded-circle p-2 d-flex align-items-center justify-content-center stats-icon">
+                            <i class="fa-solid fa-bullhorn fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-2 text-dark">@Model.ActiveNoticesCount</h3>
+                    <a href="#noticeSection" class="small text-primary fw-semibold text-decoration-none d-flex align-items-center arrow-link">
+                        Read Notice Board <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="row g-4">
+        <!-- Left Column: Bills and Complaints -->
+        <div class="col-lg-8">
+            <!-- Recent Maintenance Bills -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 dashboard-block">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-file-invoice-dollar text-primary me-2"></i> Recent Maintenance Bills</h5>
+                        <a asp-controller="Maintenance" asp-action="MyBills" class="btn btn-sm btn-light px-3 rounded-pill fw-semibold text-primary transition-all hover-scale">View All</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light border-0">
+                                <tr>
+                                    <th class="border-0 rounded-start-3">Bill Cycle</th>
+                                    <th class="border-0">Due Date</th>
+                                    <th class="border-0">Amount</th>
+                                    <th class="border-0 text-center">Status</th>
+                                    <th class="border-0 text-end rounded-end-3">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.RecentBills.Any())
+                                {
+                                    foreach (var bill in Model.RecentBills)
+                                    {
+                                        <tr>
+                                            <td class="fw-bold text-dark">@bill.DisplayMonthYear</td>
+                                            <td class="small text-secondary">@bill.DueDate.ToString("dd MMM yyyy")</td>
+                                            <td class="fw-bold text-dark">₹@bill.TotalAmount.ToString("N2")</td>
+                                            <td class="text-center">
+                                                @if (bill.Status == "Paid")
+                                                {
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 rounded-pill"><i class="fa-solid fa-circle-check me-1"></i> Paid</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-3 py-1.5 rounded-pill"><i class="fa-solid fa-clock me-1"></i> Unpaid</span>
+                                                }
+                                            </td>
+                                            <td class="text-end">
+                                                @if (bill.Status != "Paid")
+                                                {
+                                                    <a asp-controller="Maintenance" asp-action="MyBills" class="btn btn-sm btn-primary px-3.5 py-1.5 rounded-pill fw-semibold shadow-sm transition-all hover-scale">Pay Now</a>
+                                                }
+                                                else
+                                                {
+                                                    <a asp-controller="Maintenance" asp-action="Receipt" asp-route-id="@bill.BillId" class="btn btn-sm btn-outline-secondary px-3 py-1.5 rounded-pill fw-semibold transition-all hover-scale"><i class="fa-solid fa-download me-1"></i> Receipt</a>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">No maintenance invoices found.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Helpdesk Complaints -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 dashboard-block">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-headset text-danger me-2"></i> Recent Helpdesk Complaints</h5>
+                        <a asp-controller="Complaint" asp-action="MyComplaints" class="btn btn-sm btn-light px-3 rounded-pill fw-semibold text-danger transition-all hover-scale">Track Logs</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light border-0">
+                                <tr>
+                                    <th class="border-0 rounded-start-3">Ticket ID</th>
+                                    <th class="border-0">Title & Category</th>
+                                    <th class="border-0">Priority</th>
+                                    <th class="border-0 text-center">Status</th>
+                                    <th class="border-0 text-end rounded-end-3">Date Raised</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.RecentComplaints != null && Model.RecentComplaints.Any())
+                                {
+                                    foreach (var ticket in Model.RecentComplaints.Take(4))
+                                    {
+                                        <tr>
+                                            <td class="fw-bold text-secondary">#@ticket.ComplaintId</td>
+                                            <td>
+                                                <div class="fw-bold text-dark">@ticket.Title</div>
+                                                <span class="small text-muted bg-light px-2 py-0.5 rounded border">@ticket.Category</span>
+                                            </td>
+                                            <td>
+                                                @if (ticket.Priority == "High")
+                                                {
+                                                    <span class="text-danger fw-bold"><i class="fa-solid fa-circle-chevron-up"></i> High</span>
+                                                }
+                                                else if (ticket.Priority == "Medium")
+                                                {
+                                                    <span class="text-warning fw-bold"><i class="fa-solid fa-circle text-xs"></i> Medium</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-success fw-bold"><i class="fa-solid fa-circle-chevron-down"></i> Low</span>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                @if (ticket.Status == "Resolved" || ticket.Status == "Closed")
+                                                {
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 rounded-pill">@ticket.Status</span>
+                                                }
+                                                else if (ticket.Status == "In-Progress")
+                                                {
+                                                    <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-3 py-1.5 rounded-pill">In Progress</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle px-3 py-1.5 rounded-pill">Raised</span>
+                                                }
+                                            </td>
+                                            <td class="text-end small text-secondary">@ticket.CreatedAt.ToString("dd MMM yyyy")</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">No active complaints raised recently.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Utility Bills -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 dashboard-block">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-gauge-high text-success me-2"></i> Recent Utility Usage</h5>
+                        <a asp-controller="Utility" asp-action="MyUsage" class="btn btn-sm btn-light px-3 rounded-pill fw-semibold text-success transition-all hover-scale">Usage Graphs</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light border-0">
+                                <tr>
+                                    <th class="border-0 rounded-start-3">Billing Month</th>
+                                    <th class="border-0">Utility Type</th>
+                                    <th class="border-0">Usage</th>
+                                    <th class="border-0">Bill Amount</th>
+                                    <th class="border-0 text-center rounded-end-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.RecentUtilityBills.Any())
+                                {
+                                    foreach (var bill in Model.RecentUtilityBills)
+                                    {
+                                        <tr>
+                                            <td class="fw-bold text-dark">@bill.DisplayMonthYear</td>
+                                            <td class="fw-semibold">
+                                                @if ((bill.UtilityName ?? "").Contains("Power") || (bill.UtilityName ?? "").Contains("Electricity"))
+                                                {
+                                                    <i class="fa-solid fa-bolt text-warning me-1"></i>
+                                                }
+                                                else if ((bill.UtilityName ?? "").Contains("Water"))
+                                                {
+                                                    <i class="fa-solid fa-droplet text-primary me-1"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="fa-solid fa-fire text-danger me-1"></i>
+                                                }
+                                                @bill.UtilityName
+                                            </td>
+                                            <td class="small text-secondary">@bill.ConsumedUnits.ToString("N1") @bill.MeasurementUnit</td>
+                                            <td class="fw-bold text-dark">₹@bill.TotalAmount.ToString("N2")</td>
+                                            <td class="text-center">
+                                                @if (bill.Status == "Paid")
+                                                {
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 rounded-pill">Paid</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-3 py-1.5 rounded-pill">Unpaid</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">No utility bills found.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Notice Board & Polls -->
+        <div class="col-lg-4">
+            <!-- Notices -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 dashboard-block" id="noticeSection">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-bullhorn text-warning-emphasis me-2"></i> Latest Notices</h5>
+                        <a asp-controller="Notice" asp-action="Board" class="btn btn-sm btn-link text-decoration-none fw-bold p-0 transition-all hover-scale">Notice Board</a>
+                    </div>
+                    
+                    @if (Model.RecentNotices.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var notice in Model.RecentNotices)
+                            {
+                                <div class="list-group-item px-0 py-3 border-0 border-bottom notice-item">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="badge bg-light text-secondary border px-2 py-0.5 rounded-pill small">@notice.Category</span>
+                                        <small class="text-secondary"><i class="fa-regular fa-clock"></i> @notice.CreatedAt.ToString("dd MMM")</small>
+                                    </div>
+                                    <h6 class="fw-bold mb-1 text-dark">
+                                        @if(notice.IsPinned) { <i class="fa-solid fa-thumbtack text-warning me-1 small"></i> }
+                                        @notice.Title
+                                    </h6>
+                                    <p class="text-secondary small mb-2 text-truncate-2" style="font-size: 0.88rem; line-height: 1.45;">@notice.Description</p>
+                                    @if (!string.IsNullOrEmpty(notice.AttachmentPath))
+                                    {
+                                        <a href="@notice.AttachmentPath" target="_blank" class="small text-decoration-none text-primary fw-bold hover-underline"><i class="fa-solid fa-paperclip me-1"></i> View Attachment</a>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4 text-muted">No notices on the notice board.</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Polls -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 dashboard-block">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold text-dark mb-4"><i class="fa-solid fa-check-to-slot text-primary me-2"></i> Active Society Polls</h5>
+                    
+                    @if (Model.RecentPolls.Any())
+                    {
+                        foreach (var poll in Model.RecentPolls)
+                        {
+                            <div class="card border rounded-4 mb-3 shadow-sm poll-card overflow-hidden">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-start mb-2">
+                                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3 flex-shrink-0 d-flex justify-content-center align-items-center" style="width: 40px; height: 40px;">
+                                            <i class="fa-solid fa-square-poll-horizontal fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold text-dark mb-1 lh-sm">@poll.Question</h6>
+                                            <p class="text-secondary small mb-0 text-truncate-2">@poll.Description</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 pt-3 border-top text-end">
+                                        <a asp-controller="Notice" asp-action="Board" class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-4 transition-all">
+                                            Cast Vote <i class="fa-solid fa-arrow-right ms-1"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="fa-solid fa-clipboard-check fa-3x mb-3 text-secondary opacity-25"></i>
+                            <p class="mb-0">No active polls at the moment.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-12 text-center py-5">
-        <i class="fa-solid fa-person-shelter text-muted" style="font-size: 5rem;"></i>
-        <h3 class="mt-4 text-muted">Resident Dashboard Coming Soon</h3>
-        <p class="text-muted">The personalized resident view is currently under development.</p>
-    </div>
-</div>
+<style>
+    /* Clean Header Card Styles Removed */
+
+    /* KPI Cards lift & style */
+    .kpi-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+    }
+    .stats-icon {
+        width: 44px;
+        height: 44px;
+        transition: all 0.3s ease;
+    }
+    .kpi-card:hover .stats-icon {
+        transform: scale(1.1) rotate(5deg);
+    }
+    .arrow-link {
+        font-size: 0.88rem;
+    }
+    .arrow-link i {
+        transition: transform 0.25s ease;
+    }
+    .arrow-link:hover i {
+        transform: translateX(4px);
+    }
+
+    /* Dashboard Blocks card custom style */
+    .dashboard-block {
+        transition: all 0.3s ease;
+    }
+    .dashboard-block:hover {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    .notice-item {
+        transition: all 0.2s ease;
+    }
+    .notice-item:hover {
+        background-color: #f8fafc;
+        padding-left: 8px !important;
+        border-radius: 8px;
+    }
+    .poll-card {
+        transition: all 0.25s ease;
+    }
+    .poll-card:hover {
+        transform: translateY(-3px);
+        border-color: #3b82f6 !important;
+        box-shadow: 0 8px 15px rgba(59, 130, 246, 0.1) !important;
+    }
+    
+    .text-truncate-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;  
+        overflow: hidden;
+    }
+    .transition-all {
+        transition: all 0.25s ease-in-out;
+    }
+    .hover-scale:hover {
+        transform: scale(1.05);
+    }
+    .hover-underline:hover {
+        text-decoration: underline !important;
+    }
+</style>

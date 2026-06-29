@@ -1,0 +1,451 @@
+@using System.Dynamic
+@model dynamic
+
+@{
+    ViewData["Title"] = "Amenity Booking";
+    var bookings = Model.Bookings as IEnumerable<SmartSociety.Models.AmenityBooking>;
+    var amenities = Model.Amenities as IEnumerable<SmartSociety.Models.Amenity>;
+    var flat = Model.Flat as SmartSociety.Models.Flat;
+}
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-2">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item text-muted">Facilities</li>
+    <li class="breadcrumb-item active fw-bold text-primary" aria-current="page">Amenity Booking</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Amenity & Facility Booking</h2>
+        <p class="text-muted mb-0">Book common areas and resources for Flat @(flat?.BlockName)-@(flat?.FlatNumber).</p>
+    </div>
+    <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill shadow-sm" onclick="openBookingModal()">
+        <i class="fa-regular fa-calendar-plus me-2"></i> Book A Facility
+    </button>
+</div>
+
+<!-- Available Amenities Slider/Grid -->
+<h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-hotel me-1 text-primary"></i> Available Amenities</h5>
+<div class="row g-3 mb-4">
+    @if (amenities != null && amenities.Any())
+    {
+        foreach (var amenity in amenities)
+        {
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100 position-relative overflow-hidden hover-card">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center" style="width: 48px; height: 48px;">
+                                <i class="fa-solid fa-umbrella-beach fa-lg"></i>
+                            </div>
+                            <span class="badge bg-success-subtle text-success px-2.5 py-1">Active</span>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-1">@amenity.Name</h5>
+                        <p class="text-muted small mb-3 text-truncate-2">@amenity.Description</p>
+                        
+                        <div class="border-top pt-3 text-start small">
+                            <div class="text-muted mb-1"><i class="fa-solid fa-users fa-fw me-1"></i> Capacity: <span class="fw-bold text-dark">@amenity.Capacity persons</span></div>
+                            <div class="text-muted mb-1"><i class="fa-solid fa-clock fa-fw me-1"></i> Hours: <span class="fw-bold text-dark">@amenity.OpenTime.ToString(@"hh\:mm") - @amenity.CloseTime.ToString(@"hh\:mm")</span></div>
+                            <div class="text-muted"><i class="fa-solid fa-indian-rupee-sign fa-fw me-1"></i> Price: 
+                                <span class="fw-bold text-primary">
+                                    @if(amenity.PricePerHour > 0) {
+                                        @($"₹{amenity.PricePerHour}/hr")
+                                    } else {
+                                        @("Free")
+                                    }
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="col-12">
+            <div class="bg-light rounded-4 p-4 text-center text-muted border">No active facilities available.</div>
+        </div>
+    }
+</div>
+
+<!-- Bookings Log -->
+<div class="bg-white rounded-4 shadow-sm p-4">
+    <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-clock-rotate-left me-1 text-primary"></i> Booking History</h5>
+    @if (bookings == null || !bookings.Any())
+    {
+        <div class="text-center py-5">
+            <h6 class="fw-bold text-secondary">No Booking History</h6>
+            <p class="text-muted">You haven't requested any facility bookings yet.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="bookingsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Facility</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">Booking Date</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">Time Slot</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">Price</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">Payment</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">Status</th>
+                        <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    @foreach (var bk in bookings)
+                    {
+                        <tr>
+                            <td class="py-3">
+                                <div class="fw-bold text-dark">@bk.AmenityName</div>
+                                <div class="text-muted small">"@bk.Purpose"</div>
+                            </td>
+                            <td>
+                                <div class="fw-medium">@bk.BookingDate.ToString("dd MMM yyyy")</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">@bk.StartTime.ToString(@"hh\:mm") - @bk.EndTime.ToString(@"hh\:mm")</div>
+                            </td>
+                            <td>
+                                <span class="fw-bold">@(bk.TotalAmount > 0 ? $"₹{bk.TotalAmount}" : "Free")</span>
+                            </td>
+                            <td>
+                                @if (bk.TotalAmount > 0)
+                                {
+                                    if (bk.PaymentStatus == "Paid")
+                                    {
+                                        <span class="badge bg-success-subtle text-success px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i> Paid</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="fa-solid fa-circle-exclamation me-1"></i> Unpaid</span>
+                                        <button class="btn btn-xs btn-primary rounded-pill px-2.5 py-0.5 ms-2" onclick="payForBooking(@bk.BookingId, @bk.TotalAmount, '@bk.AmenityName')">Pay Now</button>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-secondary border px-2 py-1">N/A</span>
+                                }
+                            </td>
+                            <td>
+                                @if (bk.Status == "Pending")
+                                {
+                                    <span class="badge bg-warning-subtle text-warning px-2.5 py-1"><i class="fa-solid fa-clock me-1"></i> Pending Approval</span>
+                                }
+                                else if (bk.Status == "Approved")
+                                {
+                                    <span class="badge bg-success-subtle text-success px-2.5 py-1"><i class="fa-solid fa-circle-check me-1"></i> Approved</span>
+                                }
+                                else if (bk.Status == "Rejected")
+                                {
+                                    <span class="badge bg-danger-subtle text-danger px-2.5 py-1"><i class="fa-solid fa-circle-xmark me-1"></i> Rejected</span>
+                                    @if(!string.IsNullOrEmpty(bk.Remarks)) {
+                                        <div class="text-muted small mt-1 italic">Remarks: "@bk.Remarks"</div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary px-2.5 py-1">@bk.Status</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <span class="text-muted small">-</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Book Facility Modal -->
+<div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-primary text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-regular fa-calendar-plus me-2"></i> Book A Facility</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="bookingForm" onsubmit="event.preventDefault(); submitBooking();">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Select Facility <span class="text-danger">*</span></label>
+                        <select class="form-select bg-light border-0" id="AmenityId" name="amenityId" required onchange="calculateEstimatedCost()">
+                            <option value="">-- Choose Amenity --</option>
+                            @if (amenities != null)
+                            {
+                                foreach (var amenity in amenities)
+                                {
+                                    <option value="@amenity.AmenityId" data-price="@amenity.PricePerHour" data-open="@amenity.OpenTime" data-close="@amenity.CloseTime">
+                                        @amenity.Name @(amenity.PricePerHour > 0 ? $"(₹{amenity.PricePerHour}/hr)" : "(Free)")
+                                    </option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Booking Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control bg-light border-0" id="BookingDate" name="bookingDate" required min="@DateTime.Today.ToString("yyyy-MM-dd")" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">Start Time <span class="text-danger">*</span></label>
+                            <input type="time" class="form-control bg-light border-0" id="StartTime" name="startTime" required onchange="calculateEstimatedCost()" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small text-muted mb-1">End Time <span class="text-danger">*</span></label>
+                            <input type="time" class="form-control bg-light border-0" id="EndTime" name="endTime" required onchange="calculateEstimatedCost()" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Purpose <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control bg-light border-0" id="Purpose" name="purpose" required placeholder="e.g. Birthday Party, Yoga Session" />
+                    </div>
+                    <div class="bg-light rounded-3 p-3 border mb-3" id="cost-estimate-container" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted fw-medium small">Estimated Cost:</span>
+                            <span class="fw-bold text-primary fs-5" id="lbl-estimated-cost">₹0.00</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill shadow-sm fw-semibold" id="btnSubmitBook">
+                            <i class="fa-solid fa-check me-2"></i> Submit Request
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mock Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-dark text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-credit-card me-2"></i> Simulated Booking Checkout</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <div class="text-center mb-4">
+                    <p class="text-muted small mb-1">Amount to Pay</p>
+                    <h2 class="fw-bold text-dark mb-1" id="paymentAmount">₹0.00</h2>
+                    <span class="badge bg-light text-secondary border px-3 py-1.5" id="paymentFacility">Facility Booking</span>
+                </div>
+                
+                <ul class="nav nav-tabs nav-fill mb-3" id="paymentTab" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active fw-bold small py-2.5" id="upi-tab" data-bs-toggle="tab" data-bs-target="#upi" type="button" role="tab"><i class="fa-solid fa-mobile-screen-button me-1"></i> UPI QR</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-bold small py-2.5" id="card-tab" data-bs-toggle="tab" data-bs-target="#card" type="button" role="tab"><i class="fa-solid fa-credit-card me-1"></i> Card</button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content border-0 bg-transparent p-0 mt-3" id="paymentTabContent">
+                    <div class="tab-pane fade show active text-center" id="upi" role="tabpanel">
+                        <p class="text-muted small">Scan this QR code using any UPI app (GPay, PhonePe, Paytm)</p>
+                        <div class="bg-white p-3 rounded-4 border d-inline-block shadow-sm mb-3">
+                            <img id="checkout-upi-qr" src="" alt="Payment QR" class="img-fluid" style="width: 140px; height: 140px;" />
+                        </div>
+                        <input type="text" class="form-control text-center bg-light border-0 fw-semibold" value="smartsociety@ybl" readonly />
+                    </div>
+                    
+                    <div class="tab-pane fade" id="card" role="tabpanel">
+                        <form id="cardForm" onsubmit="event.preventDefault(); confirmMockPayment();">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold text-muted mb-1">Card Holder Name</label>
+                                <input type="text" class="form-control bg-light border-0" required placeholder="Name on Card" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold text-muted mb-1">Card Number</label>
+                                <input type="text" class="form-control bg-light border-0" required placeholder="XXXX XXXX XXXX XXXX" maxlength="19" />
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold text-muted mb-1">Expiry Date</label>
+                                    <input type="text" class="form-control bg-light border-0" required placeholder="MM/YY" maxlength="5" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold text-muted mb-1">CVV</label>
+                                    <input type="password" class="form-control bg-light border-0" required placeholder="XXX" maxlength="3" />
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top text-end">
+                    <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success px-5 rounded-pill shadow-sm fw-semibold" id="btnConfirmPay" onclick="confirmMockPayment()">
+                        <i class="fa-solid fa-circle-check me-2"></i> Pay Successfully
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        var bookingModal;
+        var paymentModal;
+        var activePayingBookingId = 0;
+
+        $(document).ready(function() {
+            bookingModal = new bootstrap.Modal(document.getElementById('bookingModal'));
+            paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+        });
+
+        function openBookingModal() {
+            $('#bookingForm')[0].reset();
+            $('#cost-estimate-container').hide();
+            bookingModal.show();
+        }
+
+        function calculateEstimatedCost() {
+            var selected = $('#AmenityId option:selected');
+            if (!selected.val()) {
+                $('#cost-estimate-container').hide();
+                return;
+            }
+
+            var price = parseFloat(selected.data('price')) || 0;
+            var start = $('#StartTime').val();
+            var end = $('#EndTime').val();
+
+            if (start && end) {
+                var startParts = start.split(':');
+                var endParts = end.split(':');
+                
+                var startDate = new Date(2000, 0, 1, startParts[0], startParts[1]);
+                var endDate = new Date(2000, 0, 1, endParts[0], endParts[1]);
+                
+                var diffMs = endDate - startDate;
+                var diffHours = diffMs / 1000 / 60 / 60;
+
+                if (diffHours > 0 && price > 0) {
+                    var cost = price * diffHours;
+                    $('#lbl-estimated-cost').text('₹' + cost.toFixed(2));
+                    $('#cost-estimate-container').show();
+                } else {
+                    $('#cost-estimate-container').hide();
+                }
+            } else {
+                $('#cost-estimate-container').hide();
+            }
+        }
+
+        function submitBooking() {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var data = {
+                amenityId: parseInt($('#AmenityId').val()),
+                bookingDate: $('#BookingDate').val(),
+                startTime: $('#StartTime').val(),
+                endTime: $('#EndTime').val(),
+                purpose: $('#Purpose').val(),
+                __RequestVerificationToken: token
+            };
+
+            $('#btnSubmitBook').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Requesting...');
+
+            $.ajax({
+                url: '/Amenity/BookAmenity',
+                type: 'POST',
+                data: data,
+                success: function(res) {
+                    if (res.success) {
+                        bookingModal.hide();
+                        if (res.totalAmount > 0) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Booking Request Saved!',
+                                text: 'Facility request is saved, please complete payment.',
+                                showConfirmButton: true,
+                                confirmButtonText: 'Proceed to Pay (₹' + res.totalAmount.toFixed(2) + ')'
+                            }).then(() => {
+                                payForBooking(res.bookingId, res.totalAmount, $('#AmenityId option:selected').text().split('(')[0].trim());
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Booking Request Submitted!',
+                                text: res.message,
+                                showConfirmButton: false,
+                                timer: 2000
+                            }).then(() => {
+                                location.reload();
+                            });
+                        }
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmitBook').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Submit Request');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnSubmitBook').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Submit Request');
+                }
+            });
+        }
+
+        function payForBooking(bookingId, amount, name) {
+            activePayingBookingId = bookingId;
+            $('#paymentAmount').text('₹' + amount.toFixed(2));
+            $('#paymentFacility').text(name);
+            
+            // Build checkout QR
+            var upiPayload = encodeURIComponent(`upi://pay?pa=smartsociety@ybl&pn=SmartSociety&am=${amount.toFixed(2)}&tn=AmenityBooking-${bookingId}`);
+            $('#checkout-upi-qr').attr('src', `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${upiPayload}&color=198754`);
+
+            paymentModal.show();
+        }
+
+        function confirmMockPayment() {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var data = {
+                bookingId: activePayingBookingId,
+                paymentMode: $('#upi-tab').hasClass('active') ? 'UPI' : 'Card',
+                transactionId: 'TXN-' + Math.floor(Math.random() * 900000000 + 100000000),
+                __RequestVerificationToken: token
+            };
+
+            $('#btnConfirmPay').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Confirming...');
+
+            $.ajax({
+                url: '/Amenity/RecordBookingPayment',
+                type: 'POST',
+                data: data,
+                success: function(res) {
+                    if (res.success) {
+                        paymentModal.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Payment Successful!',
+                            text: res.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnConfirmPay').prop('disabled', false).html('<i class="fa-solid fa-circle-check me-2"></i> Pay Successfully');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnConfirmPay').prop('disabled', false).html('<i class="fa-solid fa-circle-check me-2"></i> Pay Successfully');
+                }
+            });
+        }
+    </script>
+}

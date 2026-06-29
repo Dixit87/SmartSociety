@@ -1,0 +1,355 @@
+@model IEnumerable<SmartSociety.Models.Complaint>
+
+@{
+    ViewData["Title"] = "My Complaints";
+    var flat = ViewBag.Flat as SmartSociety.Models.Flat;
+}
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-2">
+    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="fa-solid fa-house"></i> Home</a></li>
+    <li class="breadcrumb-item text-muted">Helpdesk</li>
+    <li class="breadcrumb-item active fw-bold text-primary" aria-current="page">My Complaints</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" id="page-title">Helpdesk & Complaints</h2>
+        <p class="text-muted mb-0">Track and report issues for Flat @(flat?.BlockName)-@(flat?.FlatNumber).</p>
+    </div>
+    <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill shadow-sm" id="btn-raise-complaint" onclick="openComplaintModal()">
+        <i class="fa-solid fa-plus me-2"></i> File New Complaint
+    </button>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="bg-primary bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-folder-open fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Total Raised</p>
+                <h4 class="fw-bold text-dark mb-0">@Model.Count()</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-warning bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-warning text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-screwdriver-wrench fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Pending / In-Progress</p>
+                <h4 class="fw-bold text-dark mb-0">@Model.Count(c => c.Status == "Open" || c.Status == "InProgress")</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="bg-success bg-opacity-10 rounded-4 p-3 border-0 shadow-sm d-flex align-items-center">
+            <div class="bg-success text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 48px; height: 48px;">
+                <i class="fa-solid fa-circle-check fa-lg"></i>
+            </div>
+            <div>
+                <p class="text-muted small fw-bold mb-0">Resolved</p>
+                <h4 class="fw-bold text-dark mb-0">@Model.Count(c => c.Status == "Resolved" || c.Status == "Closed")</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-4 shadow-sm p-4">
+    @if (Model == null || !Model.Any())
+    {
+        <div class="text-center py-5">
+            <img src="https://img.icons8.com/illustrations/external-tribox-outline-tribox/120/external-complaint-customer-reviews-tribox-outline-tribox.png" alt="No Complaints" class="mb-3 opacity-75" />
+            <h5 class="fw-bold text-secondary">No Complaints Registered</h5>
+            <p class="text-muted">If you are facing any plumbing, electrical, or cleaning issues, feel free to file a ticket.</p>
+            <button class="btn btn-primary rounded-pill px-4 mt-2" onclick="openComplaintModal()"><i class="fa-solid fa-plus me-1"></i> File First Complaint</button>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="complaintsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-secondary fw-semibold py-3 border-0 rounded-start">Title & Category</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">Priority</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">Date Filed</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">Status</th>
+                        <th class="text-secondary fw-semibold py-3 border-0">Technician</th>
+                        <th class="text-end text-secondary fw-semibold py-3 border-0 rounded-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    @foreach (var complaint in Model)
+                    {
+                        <tr>
+                            <td class="py-3">
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark">@complaint.Title</h6>
+                                    <span class="badge bg-light text-secondary border px-2 py-0 mt-1">@complaint.Category</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge @complaint.GetPriorityBadgeClass() px-2.5 py-1 text-uppercase font-monospace text-xs">@complaint.Priority</span>
+                            </td>
+                            <td>
+                                <div class="fw-medium text-dark">@complaint.CreatedAt.ToString("dd MMM yyyy")</div>
+                                <div class="small text-muted">@complaint.CreatedAt.ToString("hh:mm tt")</div>
+                            </td>
+                            <td>
+                                <span class="badge @complaint.GetStatusBadgeClass() px-2 py-1"><i class="@complaint.GetStatusIcon() me-1"></i> @complaint.Status</span>
+                            </td>
+                            <td>
+                                @if (string.IsNullOrEmpty(complaint.TechnicianName))
+                                {
+                                    <span class="text-muted small italic">Not Assigned</span>
+                                }
+                                else
+                                {
+                                    <div class="fw-semibold text-dark"><i class="fa-solid fa-user-check text-success me-1"></i> @complaint.TechnicianName</div>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end gap-1">
+                                    <button class="btn btn-sm btn-light border rounded-pill px-3 btn-view-complaint" data-complaint='@Json.Serialize(complaint)' title="View Details">
+                                        <i class="fa-solid fa-eye text-muted"></i> View
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Raise/Edit Complaint Modal -->
+<div class="modal fade" id="complaintModal" tabindex="-1" aria-labelledby="complaintModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-primary text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold" id="complaintModalLabel"><i class="fa-solid fa-ticket me-2"></i> File New Complaint</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <form id="complaintForm" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="complaintId" name="complaintId" value="0" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Category <span class="text-danger">*</span></label>
+                        <select class="form-select bg-light border-0" id="category" name="category" required>
+                            <option value="">-- Select Category --</option>
+                            <option value="Plumbing">Plumbing</option>
+                            <option value="Electrical">Electrical</option>
+                            <option value="Cleaning">Cleaning</option>
+                            <option value="Security">Security</option>
+                            <option value="Lift">Lift / Elevator</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Complaint Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control bg-light border-0" id="title" name="title" required maxlength="100" placeholder="e.g. Water leak in kitchen pipe" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control bg-light border-0" id="description" name="description" rows="3" required placeholder="Provide details of the problem..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Priority <span class="text-danger">*</span></label>
+                        <select class="form-select bg-light border-0" id="priority" name="priority" required>
+                            <option value="Low">Low (General suggestion/query)</option>
+                            <option value="Medium" selected>Medium (Standard issue)</option>
+                            <option value="High">High (Needs quick resolution)</option>
+                            <option value="Emergency">Emergency (Requires immediate attention)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="photo-upload-group">
+                        <label class="form-label fw-semibold small text-muted mb-1">Attach Photo (Optional)</label>
+                        <input type="file" class="form-control bg-light border-0" id="photo" name="photo" accept="image/*" />
+                    </div>
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill shadow-sm fw-semibold" id="btnSubmit">
+                            <i class="fa-solid fa-paper-plane me-2"></i> Submit Ticket
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Complaint Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-dark text-white rounded-top-4 pb-3">
+                <h5 class="modal-title fw-bold" id="detailsModalLabel"><i class="fa-solid fa-circle-info me-2"></i> Complaint Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <div class="row g-4">
+                    <div class="col-md-7">
+                        <h4 class="fw-bold text-dark mb-1" id="detail-title"></h4>
+                        <span class="badge bg-secondary px-2.5 py-1 mb-3" id="detail-category"></span>
+                        
+                        <div class="mb-4">
+                            <label class="fw-bold text-muted small text-uppercase">Description</label>
+                            <p class="text-dark bg-light rounded-3 p-3 mt-1" id="detail-description"></p>
+                        </div>
+                        
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="fw-bold text-muted small text-uppercase d-block">Priority</label>
+                                <span class="badge px-3 py-1.5 mt-1 fs-6" id="detail-priority"></span>
+                            </div>
+                            <div class="col-6">
+                                <label class="fw-bold text-muted small text-uppercase d-block">Status</label>
+                                <span class="badge px-3 py-1.5 mt-1 fs-6" id="detail-status"></span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-top" id="detail-remarks-group">
+                            <label class="fw-bold text-success small text-uppercase d-block"><i class="fa-solid fa-comment-dots me-1"></i> Admin / Technician Remarks</label>
+                            <p class="text-dark bg-success bg-opacity-10 rounded-3 p-3 mt-1" id="detail-remarks"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-5 text-center bg-light rounded-4 p-3 d-flex flex-column justify-content-center align-items-center border">
+                        <label class="fw-bold text-muted small text-uppercase mb-2 d-block align-self-start">Attached Media</label>
+                        <img id="detail-photo" src="" alt="Complaint Photo" class="img-fluid rounded-3 shadow-sm border" style="max-height: 250px; object-fit: cover; display: none;" />
+                        <div id="no-photo" class="text-muted py-5"><i class="fa-regular fa-image fa-3x mb-2 opacity-50"></i><br>No Photo Attached</div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-top text-end">
+                    <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        var complaintModal;
+        var detailsModal;
+
+        $(document).ready(function() {
+            complaintModal = new bootstrap.Modal(document.getElementById('complaintModal'));
+            detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+
+            $('#complaintForm').on('submit', function(e) {
+                e.preventDefault();
+                submitComplaint();
+            });
+
+            $(document).on('click', '.btn-view-complaint', function() {
+                var complaint = $(this).data('complaint');
+                viewComplaintDetails(complaint);
+            });
+        });
+
+        function openComplaintModal() {
+            $('#complaintForm')[0].reset();
+            $('#complaintId').val(0);
+            $('#complaintModalLabel').html('<i class="fa-solid fa-ticket me-2"></i> File New Complaint');
+            $('#photo-upload-group').show();
+            complaintModal.show();
+        }
+
+        function submitComplaint() {
+            var formData = new FormData($('#complaintForm')[0]);
+            var isEdit = $('#complaintId').val() != "0";
+            var url = isEdit ? '/Complaint/Edit' : '/Complaint/Create';
+
+            $('#btnSubmit').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Submitting...');
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(res) {
+                    if (res.success) {
+                        complaintModal.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Ticket Saved!',
+                            text: res.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                        $('#btnSubmit').prop('disabled', false).html('<i class="fa-solid fa-paper-plane me-2"></i> Submit Ticket');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                    $('#btnSubmit').prop('disabled', false).html('<i class="fa-solid fa-paper-plane me-2"></i> Submit Ticket');
+                }
+            });
+        }
+
+        function viewComplaintDetails(complaint) {
+            var title = complaint.title || complaint.Title;
+            var category = complaint.category || complaint.Category;
+            var description = complaint.description || complaint.Description;
+            var priority = complaint.priority || complaint.Priority;
+            var status = complaint.status || complaint.Status;
+            var adminRemarks = complaint.adminRemarks || complaint.AdminRemarks;
+            var photoUrl = complaint.photoUrl || complaint.PhotoUrl;
+
+            $('#detail-title').text(title || '');
+            $('#detail-category').text(category || '');
+            $('#detail-description').text(description || '');
+            
+            // Priority styling
+            var pBadge = $('#detail-priority');
+            pBadge.removeClass().addClass('badge px-3 py-1.5 mt-1 fs-6');
+            if (priority == 'Low') pBadge.addClass('bg-secondary');
+            else if (priority == 'Medium') pBadge.addClass('bg-info text-dark');
+            else if (priority == 'High') pBadge.addClass('bg-warning text-dark');
+            else pBadge.addClass('bg-danger');
+            pBadge.text(priority || '');
+
+            // Status styling
+            var sBadge = $('#detail-status');
+            sBadge.removeClass().addClass('badge px-3 py-1.5 mt-1 fs-6');
+            if (status == 'Open') sBadge.addClass('bg-primary');
+            else if (status == 'InProgress') sBadge.addClass('bg-warning text-dark');
+            else if (status == 'Resolved') sBadge.addClass('bg-success');
+            else sBadge.addClass('bg-dark');
+            sBadge.text(status || '');
+
+            // Admin remarks
+            if (adminRemarks) {
+                $('#detail-remarks-group').show();
+                $('#detail-remarks').text(adminRemarks);
+            } else {
+                $('#detail-remarks-group').hide();
+            }
+
+            // Media attachment
+            if (photoUrl) {
+                $('#detail-photo').attr('src', photoUrl).show();
+                $('#no-photo').hide();
+            } else {
+                $('#detail-photo').hide();
+                $('#no-photo').show();
+            }
+
+            detailsModal.show();
+        }
+    </script>
+}

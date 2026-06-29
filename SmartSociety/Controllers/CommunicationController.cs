@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using SmartSociety.Models;
 using SmartSociety.Repositories;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartSociety.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class CommunicationController : Controller
     {
         private readonly ICommunicationRepository _repository;

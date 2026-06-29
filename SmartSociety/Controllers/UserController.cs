@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using ClosedXML.Excel;
 using SmartSociety.Models;
 using SmartSociety.Repositories;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartSociety.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class UserController : Controller
     {
         private readonly IUserRepository _userRepo;
@@ -50,6 +52,21 @@ namespace SmartSociety.Controllers
                 ModelState.AddModelError("Password", "Password is required for new users.");
             }
 
+            // Check duplicate flat number assignment
+            if (!string.IsNullOrEmpty(model.FlatNumber))
+            {
+                var allUsers = await _userRepo.GetAllUsersAsync();
+                var alreadyAssignedUser = allUsers.FirstOrDefault(u => 
+                    string.Equals(u.FlatNumber?.Trim(), model.FlatNumber.Trim(), StringComparison.OrdinalIgnoreCase) && 
+                    u.UserId != model.UserId && 
+                    u.IsActive);
+
+                if (alreadyAssignedUser != null)
+                {
+                    ModelState.AddModelError("FlatNumber", $"Flat {model.FlatNumber} is already assigned to {alreadyAssignedUser.FullName} ({alreadyAssignedUser.Role}).");
+                }
+            }
+
             if (ModelState.IsValid)
             {
                 try
@@ -61,6 +78,15 @@ namespace SmartSociety.Controllers
                     }
                     if (profileImage != null && profileImage.Length > 0)
                     {
+                        // Security: Validate file extension
+                        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+                        var extension = Path.GetExtension(profileImage.FileName).ToLower();
+                        if (!allowedExtensions.Contains(extension))
+                        {
+                            ModelState.AddModelError("profileImage", "Only image files (.jpg, .jpeg, .png) are allowed.");
+                            return View(model);
+                        }
+
                         // Delete old image if updating
                         if (model.UserId > 0)
                         {
@@ -103,6 +129,36 @@ namespace SmartSociety.Controllers
             }
 
             return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CheckFlatAssignment(string flatNumber, int excludeUserId)
+        {
+            if (string.IsNullOrWhiteSpace(flatNumber))
+            {
+                return Json(new { isAssigned = false });
+            }
+
+            var allUsers = await _userRepo.GetAllUsersAsync();
+            var assignedUser = allUsers.FirstOrDefault(u => 
+                string.Equals(u.FlatNumber?.Trim(), flatNumber.Trim(), StringComparison.OrdinalIgnoreCase) && 
+                u.UserId != excludeUserId && 
+                u.IsActive);
+
+            if (assignedUser != null)
+            {
+                return Json(new { 
+                    isAssigned = true, 
+                    userId = assignedUser.UserId,
+                    fullName = assignedUser.FullName,
+                    email = assignedUser.Email ?? "N/A",
+                    phoneNumber = assignedUser.PhoneNumber,
+                    role = assignedUser.Role,
+                    profilePicture = assignedUser.ProfilePicture ?? ""
+                });
+            }
+
+            return Json(new { isAssigned = false });
         }
 
         [HttpPost]
@@ -230,47 +286,72 @@ namespace SmartSociety.Controllers
 
             try
             {
+                var allUsers = await _userRepo.GetAllUsersAsync();
+                var uploadedFlats = new List<string>();
+
                 using (var stream = new MemoryStream())
                 {
                     await uploadFile.CopyToAsync(stream);
                     using (var workbook = new XLWorkbook(stream))
                     {
                         var worksheet = workbook.Worksheet(1);
-                        var rows = worksheet.RangeUsed().RowsUsed().Skip(1); // Skip header row
-
-                        foreach (var row in rows)
+                        var rangeUsed = worksheet.RangeUsed();
+                        if (rangeUsed != null)
                         {
-                            try
-                            {
-                                string fullName = row.Cell(1).GetString().Trim();
-                                string phone = row.Cell(2).GetString().Trim();
-                                string email = row.Cell(3).GetString().Trim();
-                                string flatNo = row.Cell(4).GetString().Trim();
-                                string password = row.Cell(5).GetString().Trim();
+                            var rows = rangeUsed.RowsUsed().Skip(1); // Skip header row
 
-                                if (string.IsNullOrEmpty(fullName) || string.IsNullOrEmpty(phone) || string.IsNullOrEmpty(password))
+                            foreach (var row in rows)
+                            {
+                                try
+                                {
+                                    string fullName = row.Cell(1).GetString().Trim();
+                                    string phone = row.Cell(2).GetString().Trim();
+                                    string email = row.Cell(3).GetString().Trim();
+                                    string flatNo = row.Cell(4).GetString().Trim();
+                                    string password = row.Cell(5).GetString().Trim();
+
+                                    if (string.IsNullOrEmpty(fullName) || string.IsNullOrEmpty(phone) || string.IsNullOrEmpty(password))
+                                    {
+                                        errorCount++;
+                                        continue;
+                                    }
+
+                                    if (!string.IsNullOrEmpty(flatNo))
+                                    {
+                                        var isAlreadyAssigned = allUsers.Any(u => 
+                                            string.Equals(u.FlatNumber?.Trim(), flatNo.Trim(), StringComparison.OrdinalIgnoreCase) && 
+                                            u.IsActive);
+
+                                        var isDuplicatedInExcel = uploadedFlats.Any(f => 
+                                            string.Equals(f.Trim(), flatNo.Trim(), StringComparison.OrdinalIgnoreCase));
+
+                                        if (isAlreadyAssigned || isDuplicatedInExcel)
+                                        {
+                                            errorCount++;
+                                            continue;
+                                        }
+
+                                        uploadedFlats.Add(flatNo);
+                                    }
+
+                                    var user = new User
+                                    {
+                                        FullName = fullName,
+                                        PhoneNumber = phone,
+                                        Email = email,
+                                        Role = "Resident", // Hardcoded per user request
+                                        FlatNumber = flatNo,
+                                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                                        IsActive = true
+                                    };
+
+                                    await _userRepo.UpsertUserAsync(user);
+                                    successCount++;
+                                }
+                                catch
                                 {
                                     errorCount++;
-                                    continue;
                                 }
-
-                                var user = new User
-                                {
-                                    FullName = fullName,
-                                    PhoneNumber = phone,
-                                    Email = email,
-                                    Role = "Resident", // Hardcoded per user request
-                                    FlatNumber = flatNo,
-                                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-                                    IsActive = true
-                                };
-
-                                await _userRepo.UpsertUserAsync(user);
-                                successCount++;
-                            }
-                            catch
-                            {
-                                errorCount++;
                             }
                         }
                     }
@@ -279,7 +360,7 @@ namespace SmartSociety.Controllers
                 string msg = $"Bulk upload completed. {successCount} users imported successfully.";
                 if (errorCount > 0)
                 {
-                    msg += $" {errorCount} rows failed or had missing required fields.";
+                    msg += $" {errorCount} rows failed or had duplicate/existing flat assignments.";
                 }
 
                 return Json(new { success = true, message = msg });
